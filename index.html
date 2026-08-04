@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Explorer - Debug</title>
+  
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f0f2f6;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    #app {
+      width: 1200px;
+      max-width: 98vw;
+      height: 700px;
+      max-height: 98vh;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #e6edf4;
+    }
+    
+    #titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      border-bottom: 1px solid #eef2f7;
+      background: #fafcff;
+      flex-shrink: 0;
+    }
+    
+    #titlebar h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1c2f44;
+    }
+    
+    #titlebar .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .view-tabs {
+      display: flex;
+      gap: 4px;
+      background: #eef3f9;
+      border-radius: 8px;
+      padding: 3px;
+    }
+    
+    .view-tab {
+      padding: 4px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      background: transparent;
+      color: #6a7f9b;
+      transition: all 0.15s;
+    }
+    
+    .view-tab.active {
+      background: white;
+      color: #1c2f44;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .view-tab:hover:not(.active) {
+      color: #1c2f44;
+    }
+    
+    #split-view {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    #tree-view-container {
+      width: 40%;
+      min-width: 250px;
+      overflow: auto;
+      border-right: 1px solid #eef2f7;
+      flex-shrink: 0;
+      padding: 8px 0;
+    }
+    
+    #property-view-container {
+      flex: 1;
+      overflow: auto;
+      padding: 16px 20px;
+    }
+    
+    #table-view-container {
+      flex: 1;
+      overflow: auto;
+      display: none;
+      padding: 0;
+    }
+    
+    .btn {
+      padding: 4px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    
+    .btn-secondary {
+      background: #eef3f9;
+      color: #1c2f44;
+    }
+    
+    .btn-secondary:hover {
+      background: #dce5ef;
+    }
+
+    /* TreeView Styles */
+    .tree-container {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      user-select: none;
+    }
+
+    .tree-node {
+      cursor: default;
+    }
+
+    .tree-node-content {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+
+    .tree-node-content:hover {
+      background: #f0f4f9;
+    }
+
+    .tree-node-content.selected {
+      background: #e3edfa;
+      font-weight: 500;
+    }
+
+    .tree-toggle {
+      display: inline-block;
+      width: 16px;
+      font-size: 10px;
+      color: #6a7f9b;
+    }
+
+    .tree-toggle-spacer {
+      display: inline-block;
+      width: 16px;
+    }
+
+    .tree-label {
+      color: #1c2f44;
+    }
+
+    .tree-type-badge {
+      font-size: 11px;
+      font-weight: 400;
+      opacity: 0.7;
+      margin-left: 4px;
+    }
+
+    .tree-empty {
+      padding: 20px;
+      color: #94a3b8;
+      text-align: center;
+      font-style: italic;
+    }
+
+    /* PropertyView Styles */
+    .property-empty {
+      padding: 40px 20px;
+      color: #94a3b8;
+      text-align: center;
+      font-style: italic;
+    }
+
+    .property-container {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+    }
+
+    .property-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #eef2f7;
+      margin-bottom: 16px;
+    }
+
+    .property-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1c2f44;
+    }
+
+    .property-type {
+      font-size: 13px;
+      color: #6a7f9b;
+      background: #eef3f9;
+      padding: 2px 10px;
+      border-radius: 12px;
+    }
+
+    .property-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .property-item {
+      display: flex;
+      align-items: baseline;
+      padding: 6px 8px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+
+    .property-item:hover {
+      background: #f8faff;
+    }
+
+    .property-label {
+      width: 120px;
+      flex-shrink: 0;
+      font-weight: 500;
+      color: #4a5f7a;
+      font-size: 13px;
+    }
+
+    .property-value {
+      flex: 1;
+      color: #1c2f44;
+      font-size: 13px;
+      word-break: break-all;
+    }
+
+    .property-link {
+      color: #2563eb;
+      text-decoration: none;
+      cursor: pointer;
+      border-bottom: 1px dashed #2563eb;
+    }
+
+    .property-link:hover {
+      color: #1d4ed8;
+      border-bottom-color: #1d4ed8;
+    }
+
+    /* TableView Styles - Debug */
+    #table-view-container {
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .tableview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      border-bottom: 1px solid #eef2f7;
+      background: #fafcff;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tableview-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .tableview-header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .table-selector {
+      padding: 4px 10px;
+      border: 1px solid #dce5ef;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      background: white;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .badge-count {
+      background: #eef3fa;
+      color: #2c4a6e;
+      padding: 2px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .add-column-group {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .add-column-group input,
+    .add-column-group select {
+      padding: 3px 8px;
+      border: 1px solid #dce5ef;
+      border-radius: 4px;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .add-column-group input {
+      width: 90px;
+    }
+    .add-column-group select {
+      width: 90px;
+    }
+
+    .data-table {
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+      table-layout: fixed;
+      width: 100%;
+      min-width: 650px;
+    }
+
+    .data-table th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #f8faff;
+      color: #1c2f44;
+      font-weight: 600;
+      padding: 6px 12px 4px 12px;
+      text-align: left;
+      border-bottom: 2px solid #dce5ef;
+      user-select: none;
+      position: relative;
+      vertical-align: top;
+      height: auto;
+      min-height: 44px;
+    }
+
+    .data-table th:last-child {
+      width: auto !important;
+      min-width: 150px !important;
+    }
+
+    .data-table .col-header-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      width: 100%;
+      position: relative;
+      padding-right: 20px;
+    }
+
+    .data-table .col-header-content .col-type {
+      font-weight: 400;
+      color: #6a7f9b;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: #eef3f9;
+      padding: 1px 8px;
+      border-radius: 10px;
+      display: inline-block;
+      width: fit-content;
+    }
+
+    .data-table .col-header-content .col-name {
+      font-weight: 600;
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .data-table .col-delete-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 10px;
+      padding: 1px 4px;
+      border-radius: 4px;
+      opacity: 0;
+    }
+
+    .data-table th:hover .col-delete-btn {
+      opacity: 1;
+    }
+
+    .data-table td {
+      padding: 4px 12px;
+      border-bottom: 1px solid #edf2f9;
+      color: #142433;
+      vertical-align: middle;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .data-table .row-delete-cell {
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      background: white;
+      border-right: 1px solid #edf2f9;
+      text-align: center;
+      padding: 2px 4px;
+      min-width: 40px;
+      max-width: 40px;
+      width: 40px;
+    }
+
+    .data-table .row-delete-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      opacity: 0;
+    }
+
+    .data-table tr:hover .row-delete-btn {
+      opacity: 1;
+    }
+
+    .data-table .row-delete-btn:hover {
+      color: #dc2626;
+      background: #fee2e2;
+    }
+
+    .data-table .cell-content {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-height: 1.2rem;
+    }
+
+    .data-table .cell-content .empty-value {
+      color: #94a3b8;
+      font-style: italic;
+    }
+
+    .data-table .editable-cell {
+      cursor: cell;
+      position: relative;
+    }
+
+    .data-table .editable-cell input,
+    .data-table .editable-cell select {
+      font: inherit;
+      padding: 2px 6px;
+      border: 2px solid #2563eb;
+      border-radius: 4px;
+      outline: none;
+      background: white;
+      width: 100%;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      font-size: 12px;
+    }
+
+    .data-table th:first-child {
+      min-width: 40px !important;
+      max-width: 40px !important;
+      width: 40px !important;
+      text-align: center;
+      padding: 4px 2px;
+      font-size: 10px;
+      color: #94a3b8;
+    }
+
+    .empty-state {
+      padding: 30px 20px;
+      text-align: center;
+      color: #6a7f9b;
+    }
+
+    .btn-success {
+      background: #16a34a;
+      color: white;
+    }
+    .btn-success:hover {
+      background: #15803d;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-sm {
+      padding: 3px 10px;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="titlebar">
+      <h1>📊 Data Explorer</h1>
+      <div class="controls">
+        <div class="view-tabs">
+          <button class="view-tab active" data-view="tree">Tree</button>
+          <button class="view-tab" data-view="table">Table</button>
+        </div>
+        <button class="btn btn-secondary" id="exportBtn">📥 Export</button>
+        <button class="btn btn-secondary" id="importBtn">📤 Import</button>
+      </div>
+    </div>
+    
+    <div id="split-view">
+      <div id="tree-view-container"></div>
+      <div id="property-view-container"></div>
+      <div id="table-view-container"></div>
+    </div>
+  </div>
+  
+  <script type="module">
+    // --------------------------------------------------------------
+    // UUID GENERATOR
+    // --------------------------------------------------------------
+    function generateUUID() {
+      return Math.random().toString(36).slice(2, 11) + 
+             Math.random().toString(36).slice(2, 11);
+    }
+
+    // --------------------------------------------------------------
+    // MODEL LAYER
+    // --------------------------------------------------------------
+    class Type {
+      constructor(name, properties = [], instances = []) {
+        this.id = generateUUID();
+        this.name = name;
+        this.properties = properties.map(p => ({
+          ...p,
+          id: p.id || generateUUID()
+        }));
+        this.instances = instances.map(row => ({
+          ...row,
+          id: row.id || generateUUID()
+        }));
+      }
+
+      addInstance(rowData) {
+        const newRow = {
+          ...rowData,
+          id: rowData.id || generateUUID()
+        };
+        this.instances.push(newRow);
+        return newRow.id;
+      }
+
+      deleteInstance(rowIndex) {
+        if (rowIndex < 0 || rowIndex >= this.instances.length) return false;
+        this.instances.splice(rowIndex, 1);
+        return true;
+      }
+
+      updateCell(rowIndex, propertyName, newValue) {
+        if (rowIndex < 0 || rowIndex >= this.instances.length) return false;
+        const row = this.instances[rowIndex];
+        if (!(propertyName in row)) return false;
+        const propDef = this.properties.find(p => p.name === propertyName);
+        if (!propDef) return false;
+        try {
+          row[propertyName] = this.coerceValue(newValue, propDef.type, propDef);
+        } catch (_) {
+          return false;
+        }
+        return true;
+      }
+
+      coerceValue(value, type, propDef = null) {
+        if (value === null || value === undefined || value === '') {
+          return this.getDefaultForType(type);
+        }
+        switch (type) {
+          case 'string': return String(value);
+          case 'number': { const num = Number(value); return isNaN(num) ? 0 : num; }
+          case 'boolean': {
+            if (typeof value === 'boolean') return value;
+            if (typeof value === 'string') {
+              const lower = value.toLowerCase();
+              if (lower === 'true' || lower === '1' || lower === 'yes') return true;
+              if (lower === 'false' || lower === '0' || lower === 'no') return false;
+            }
+            return Boolean(value);
+          }
+          case 'array': {
+            if (Array.isArray(value)) return value.slice();
+            if (typeof value === 'string') {
+              try { return JSON.parse(value); } catch (_) { return [value]; }
+            }
+            return [String(value)];
+          }
+          case 'link': {
+            if (!value || value === '') return null;
+            return String(value);
+          }
+          default: return value;
+        }
+      }
+
+      getDefaultForType(type) {
+        switch (type) {
+          case 'string': return '';
+          case 'number': return 0;
+          case 'boolean': return true;
+          case 'array': return [];
+          case 'link': return null;
+          default: return null;
+        }
+      }
+
+      addColumn(property) {
+        if (this.properties.find(p => p.name === property.name)) {
+          return false;
+        }
+        const newProp = {
+          ...property,
+          id: property.id || generateUUID()
+        };
+        this.properties.push(newProp);
+        const defaultValue = this.getDefaultForType(newProp.type);
+        this.instances.forEach(row => {
+          row[newProp.name] = defaultValue;
+        });
+        return true;
+      }
+
+      deleteColumn(propertyName) {
+        const index = this.properties.findIndex(p => p.name === propertyName);
+        if (index === -1) return false;
+        this.properties.splice(index, 1);
+        this.instances.forEach(row => {
+          delete row[propertyName];
+        });
+        return true;
+      }
+
+      deleteColumnById(propertyId) {
+        const index = this.properties.findIndex(p => p.id === propertyId);
+        if (index === -1) return false;
+        const propName = this.properties[index].name;
+        this.properties.splice(index, 1);
+        this.instances.forEach(row => {
+          delete row[propName];
+        });
+        return true;
+      }
+
+      getProperty(name) {
+        return this.properties.find(p => p.name === name);
+      }
+
+      getPropertyNames() {
+        return this.properties.map(p => p.name);
+      }
+
+      rowCount() {
+        return this.instances.length;
+      }
+
+      createDefaultRow() {
+        const row = { id: generateUUID() };
+        this.properties.forEach(prop => {
+          row[prop.name] = this.getDefaultForType(prop.type);
+        });
+        return row;
+      }
+
+      findLinkColumnsReferencing(tableId) {
+        return this.properties.filter(p => 
+          p.type === 'link' && p.targetTable === tableId
+        );
+      }
+    }
+
+    class Model {
+      constructor() {
+        this.tables = {};
+        this.currentTableId = null;
+        this.subscribers = [];
+      }
+
+      subscribe(callback) {
+        this.subscribers.push(callback);
+        return () => {
+          this.subscribers = this.subscribers.filter(cb => cb !== callback);
+        };
+      }
+
+      notify() {
+        console.log('📢 Model.notify() called, subscribers:', this.subscribers.length);
+        this.subscribers.forEach(callback => {
+          try {
+            callback();
+          } catch (e) {
+            console.error('Error in subscriber:', e);
+          }
+        });
+      }
+
+      addTable(name, properties = [], instances = []) {
+        if (Object.values(this.tables).find(t => t.name === name)) {
+          return false;
+        }
+        const table = new Type(name, properties, instances);
+        this.tables[table.id] = table;
+        if (!this.currentTableId) {
+          this.currentTableId = table.id;
+        }
+        this.notify();
+        return table.id;
+      }
+
+      deleteTable(tableId) {
+        if (!this.tables[tableId]) return false;
+        if (Object.keys(this.tables).length === 1) return false;
+        
+        const referencingColumns = [];
+        for (const [id, table] of Object.entries(this.tables)) {
+          if (id === tableId) continue;
+          const linkCols = table.findLinkColumnsReferencing(tableId);
+          linkCols.forEach(col => {
+            referencingColumns.push({
+              tableName: table.name,
+              columnName: col.name,
+              columnId: col.id
+            });
+          });
+        }
+
+        for (const [id, table] of Object.entries(this.tables)) {
+          if (id === tableId) continue;
+          const linkCols = table.findLinkColumnsReferencing(tableId);
+          linkCols.forEach(col => {
+            table.deleteColumnById(col.id);
+          });
+        }
+
+        delete this.tables[tableId];
+        
+        if (this.currentTableId === tableId) {
+          const keys = Object.keys(this.tables);
+          this.currentTableId = keys.length > 0 ? keys[0] : null;
+        }
+        
+        this.notify();
+        return { success: true, deletedColumns: referencingColumns };
+      }
+
+      getCurrentTable() {
+        if (!this.currentTableId || !this.tables[this.currentTableId]) {
+          const keys = Object.keys(this.tables);
+          if (keys.length > 0) {
+            this.currentTableId = keys[0];
+          } else {
+            return null;
+          }
+        }
+        return this.tables[this.currentTableId];
+      }
+
+      getTableNames() {
+        return Object.values(this.tables).map(t => t.name);
+      }
+
+      getTableIdByName(name) {
+        const table = Object.values(this.tables).find(t => t.name === name);
+        return table ? table.id : null;
+      }
+
+      getTableNameById(id) {
+        return this.tables[id] ? this.tables[id].name : null;
+      }
+
+      switchTable(tableId) {
+        if (this.tables[tableId]) {
+          this.currentTableId = tableId;
+          this.notify();
+          return true;
+        }
+        return false;
+      }
+
+      getTable(id) {
+        return this.tables[id];
+      }
+
+      getTableByName(name) {
+        return Object.values(this.tables).find(t => t.name === name);
+      }
+
+      getDisplayNameForInstance(tableId, instanceId) {
+        const table = this.getTable(tableId);
+        if (!table) return null;
+        
+        const instance = table.instances.find(row => row.id === instanceId);
+        if (!instance) return null;
+        
+        if (instance.name && typeof instance.name === 'string') {
+          return instance.name;
+        }
+        if (instance.title && typeof instance.title === 'string') {
+          return instance.title;
+        }
+        return instanceId;
+      }
+
+      getDisplayNameForLink(linkValue, targetTableId) {
+        if (!linkValue) return null;
+        return this.getDisplayNameForInstance(targetTableId, linkValue);
+      }
+
+      // TreeView helper methods
+      getAllInstances() {
+        const all = [];
+        for (const [tableId, table] of Object.entries(this.tables)) {
+          table.instances.forEach(instance => {
+            all.push({
+              ...instance,
+              _tableId: tableId,
+              _tableName: table.name,
+              _type: table.name
+            });
+          });
+        }
+        return all;
+      }
+
+      findChildren(instanceId, tableId) {
+        const children = [];
+        const table = this.getTable(tableId);
+        if (!table) return children;
+
+        const linkProps = table.properties.filter(p => p.type === 'link');
+        for (const prop of linkProps) {
+          const instance = table.instances.find(inst => inst.id === instanceId);
+          if (!instance) continue;
+          
+          const linkValue = instance[prop.name];
+          if (!linkValue) continue;
+          
+          const targetTable = this.getTable(prop.targetTable);
+          if (!targetTable) continue;
+          
+          const targetInstance = targetTable.instances.find(inst => inst.id === linkValue);
+          if (targetInstance) {
+            children.push({
+              ...targetInstance,
+              _tableId: targetTable.id,
+              _tableName: targetTable.name,
+              _type: targetTable.name,
+              _linkProperty: prop.name
+            });
+          }
+        }
+        return children;
+      }
+
+      getRootInstances() {
+        const allInstances = this.getAllInstances();
+        const linkedIds = new Set();
+        
+        for (const [tableId, table] of Object.entries(this.tables)) {
+          const linkProps = table.properties.filter(p => p.type === 'link');
+          for (const instance of table.instances) {
+            for (const prop of linkProps) {
+              const linkValue = instance[prop.name];
+              if (linkValue) {
+                linkedIds.add(linkValue);
+              }
+            }
+          }
+        }
+        
+        return allInstances.filter(inst => !linkedIds.has(inst.id));
+      }
+
+      getDisplayName(instance) {
+        if (instance.name && typeof instance.name === 'string') {
+          return instance.name;
+        }
+        if (instance.title && typeof instance.title === 'string') {
+          return instance.title;
+        }
+        return instance.id;
+      }
+    }
+
+    // --------------------------------------------------------------
+    // TREEVIEW COMPONENT
+    // --------------------------------------------------------------
+    class TreeView {
+      constructor(container, model) {
+        this.container = container;
+        this.model = model;
+        this.selectedInstanceId = null;
+        this.selectedTableId = null;
+        this.expandedIds = new Set();
+        this.onSelect = null;
+        
+        this.unsubscribe = model.subscribe(() => {
+          console.log('🌳 TreeView received notification');
+          this.render();
+        });
+        
+        console.log('🌳 TreeView initialized');
+        this.render();
+      }
+
+      render() {
+        console.log('🌳 TreeView.render() called');
+        const roots = this.model.getRootInstances();
+        console.log('🌳 Roots:', roots.length);
+        
+        this.container.innerHTML = '';
+        
+        if (roots.length === 0) {
+          this.container.innerHTML = '<div class="tree-empty">No data. Create some instances!</div>';
+          return;
+        }
+        
+        const treeContainer = document.createElement('div');
+        treeContainer.className = 'tree-container';
+        
+        roots.forEach(root => {
+          const item = this.createTreeNode(root);
+          treeContainer.appendChild(item);
+        });
+        
+        this.container.appendChild(treeContainer);
+      }
+
+      createTreeNode(instance, depth = 0) {
+        const div = document.createElement('div');
+        div.className = 'tree-node';
+        div.style.paddingLeft = `${depth * 20}px`;
+        div.dataset.instanceId = instance.id;
+        div.dataset.tableId = instance._tableId;
+
+        const content = document.createElement('div');
+        content.className = 'tree-node-content';
+        
+        const children = this.model.findChildren(instance.id, instance._tableId);
+        const hasChildren = children.length > 0;
+        
+        if (hasChildren) {
+          const toggle = document.createElement('span');
+          toggle.className = 'tree-toggle';
+          const isExpanded = this.expandedIds.has(instance.id);
+          toggle.textContent = isExpanded ? '▼' : '▶';
+          toggle.style.cursor = 'pointer';
+          toggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleExpand(instance.id);
+          });
+          content.appendChild(toggle);
+        } else {
+          const spacer = document.createElement('span');
+          spacer.className = 'tree-toggle-spacer';
+          spacer.textContent = ' ';
+          content.appendChild(spacer);
+        }
+        
+        const displayName = this.model.getDisplayName(instance);
+        const typeLabel = instance._type || 'unknown';
+        
+        const label = document.createElement('span');
+        label.className = 'tree-label';
+        label.textContent = displayName;
+        
+        const typeBadge = document.createElement('span');
+        typeBadge.className = 'tree-type-badge';
+        typeBadge.textContent = `[${typeLabel}]`;
+        
+        content.appendChild(label);
+        content.appendChild(typeBadge);
+        
+        if (this.selectedInstanceId === instance.id) {
+          content.classList.add('selected');
+        }
+        
+        content.addEventListener('click', () => {
+          this.selectInstance(instance.id, instance._tableId);
+        });
+        
+        div.appendChild(content);
+        
+        if (hasChildren && this.expandedIds.has(instance.id)) {
+          const childrenContainer = document.createElement('div');
+          childrenContainer.className = 'tree-children';
+          children.forEach(child => {
+            const childNode = this.createTreeNode(child, depth + 1);
+            childrenContainer.appendChild(childNode);
+          });
+          div.appendChild(childrenContainer);
+        }
+        
+        return div;
+      }
+
+      toggleExpand(instanceId) {
+        if (this.expandedIds.has(instanceId)) {
+          this.expandedIds.delete(instanceId);
+        } else {
+          this.expandedIds.add(instanceId);
+        }
+        this.render();
+      }
+
+      selectInstance(instanceId, tableId) {
+        console.log('🌳 Selected:', instanceId, tableId);
+        this.selectedInstanceId = instanceId;
+        this.selectedTableId = tableId;
+        
+        if (this.onSelect) {
+          this.onSelect(instanceId, tableId);
+        }
+        
+        this.render();
+      }
+
+      destroy() {
+        if (this.unsubscribe) {
+          this.unsubscribe();
+        }
+      }
+    }
+
+    // --------------------------------------------------------------
+    // PROPERTYVIEW COMPONENT
+    // --------------------------------------------------------------
+    class PropertyView {
+      constructor(container, model) {
+        this.container = container;
+        this.model = model;
+        this.selectedInstanceId = null;
+        this.selectedTableId = null;
+        
+        this.unsubscribe = model.subscribe(() => {
+          console.log('📋 PropertyView received notification');
+          if (this.selectedInstanceId) {
+            this.render();
+          }
+        });
+        
+        console.log('📋 PropertyView initialized');
+        this.render();
+      }
+
+      render() {
+        console.log('📋 PropertyView.render() called');
+        this.container.innerHTML = '';
+        
+        if (!this.selectedInstanceId || !this.selectedTableId) {
+          this.container.innerHTML = '<div class="property-empty">Select an instance to view properties</div>';
+          return;
+        }
+        
+        const table = this.model.getTable(this.selectedTableId);
+        if (!table) {
+          this.container.innerHTML = '<div class="property-empty">Table not found</div>';
+          return;
+        }
+        
+        const instance = table.instances.find(inst => inst.id === this.selectedInstanceId);
+        if (!instance) {
+          this.container.innerHTML = '<div class="property-empty">Instance not found</div>';
+          return;
+        }
+        
+        const container = document.createElement('div');
+        container.className = 'property-container';
+        
+        const header = document.createElement('div');
+        header.className = 'property-header';
+        const displayName = this.model.getDisplayName(instance);
+        header.innerHTML = `
+          <span class="property-title">${displayName}</span>
+          <span class="property-type">[${table.name}]</span>
+        `;
+        container.appendChild(header);
+        
+        const list = document.createElement('div');
+        list.className = 'property-list';
+        
+        const propDefs = table.properties;
+        for (const propDef of propDefs) {
+          const value = instance[propDef.name];
+          const item = document.createElement('div');
+          item.className = 'property-item';
+          
+          const label = document.createElement('span');
+          label.className = 'property-label';
+          label.textContent = propDef.name;
+          
+          const valueSpan = document.createElement('span');
+          valueSpan.className = 'property-value';
+          
+          if (propDef.type === 'link' && value) {
+            const link = document.createElement('a');
+            link.className = 'property-link';
+            const displayName = this.model.getDisplayNameForLink(value, propDef.targetTable);
+            link.textContent = displayName || value;
+            link.href = '#';
+            link.addEventListener('click', (e) => {
+              e.preventDefault();
+              const targetTable = this.model.getTable(propDef.targetTable);
+              if (targetTable) {
+                const targetInstance = targetTable.instances.find(inst => inst.id === value);
+                if (targetInstance) {
+                  this.selectInstance(value, propDef.targetTable);
+                }
+              }
+            });
+            valueSpan.appendChild(link);
+          } else if (propDef.type === 'boolean') {
+            valueSpan.textContent = value ? '✓ true' : '✗ false';
+          } else if (propDef.type === 'array') {
+            valueSpan.textContent = Array.isArray(value) ? JSON.stringify(value) : String(value);
+          } else {
+            valueSpan.textContent = value !== undefined && value !== null ? String(value) : '—';
+          }
+          
+          item.appendChild(label);
+          item.appendChild(valueSpan);
+          list.appendChild(item);
+        }
+        
+        container.appendChild(list);
+        this.container.appendChild(container);
+      }
+
+      selectInstance(instanceId, tableId) {
+        this.selectedInstanceId = instanceId;
+        this.selectedTableId = tableId;
+        this.render();
+      }
+
+      destroy() {
+        if (this.unsubscribe) {
+          this.unsubscribe();
+        }
+      }
+    }
+
+    // --------------------------------------------------------------
+    // TABLEVIEW COMPONENT
+    // --------------------------------------------------------------
+    class TableView {
+      constructor(container, model) {
+        this.container = container;
+        this.model = model;
+        this.editingCell = null;
+        this.resizeData = null;
+        this.columnWidths = [];
+        this.tableWidth = 0;
+        this.table = null;
+        this.colGroup = null;
+        
+        this.unsubscribe = model.subscribe(() => {
+          console.log('📊 TableView received notification');
+          this.render();
+        });
+        
+        this.handleDoubleClick = this.handleDoubleClick.bind(this);
+        this.handleBlur = this.handleBlur.bind(this);
+        this.handleKeyDown = this.handleKeyDown.bind(this);
+        this.handleResizeStart = this.handleResizeStart.bind(this);
+        this.handleResizeMove = this.handleResizeMove.bind(this);
+        this.handleResizeEnd = this.handleResizeEnd.bind(this);
+        this.handleTableSelectorChange = this.handleTableSelectorChange.bind(this);
+        this.handleAddColumn = this.handleAddColumn.bind(this);
+        this.handleAddInstance = this.handleAddInstance.bind(this);
+        
+        console.log('📊 TableView initialized');
+        this.render();
+        
+        document.addEventListener('mousemove', this.handleResizeMove);
+        document.addEventListener('mouseup', this.handleResizeEnd);
+      }
+
+      render() {
+        console.log('📊 TableView.render() called');
+        this.container.innerHTML = '';
+        this.renderHeader();
+        this.renderTable();
+      }
+
+      renderHeader() {
+        const currentTable = this.model.getCurrentTable();
+        const tableNames = this.model.getTableNames();
+        
+        const header = document.createElement('div');
+        header.className = 'tableview-header';
+        
+        const leftDiv = document.createElement('div');
+        leftDiv.className = 'tableview-header-left';
+        
+        const select = document.createElement('select');
+        select.className = 'table-selector';
+        tableNames.forEach(name => {
+          const option = document.createElement('option');
+          const tableId = this.model.getTableIdByName(name);
+          option.value = tableId;
+          option.textContent = name;
+          const table = this.model.getTableByName(name);
+          if (table && table.id === this.model.currentTableId) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+        select.addEventListener('change', this.handleTableSelectorChange);
+        leftDiv.appendChild(select);
+        
+        if (currentTable) {
+          const count = document.createElement('span');
+          count.className = 'badge-count';
+          count.textContent = `${currentTable.rowCount()} rows · ${currentTable.properties.length} cols`;
+          leftDiv.appendChild(count);
+        }
+        
+        const addRowBtn = document.createElement('button');
+        addRowBtn.className = 'btn btn-success btn-sm';
+        addRowBtn.textContent = '+ Instance';
+        addRowBtn.addEventListener('click', this.handleAddInstance);
+        leftDiv.appendChild(addRowBtn);
+        
+        header.appendChild(leftDiv);
+        
+        const rightDiv = document.createElement('div');
+        rightDiv.className = 'tableview-header-right';
+        
+        const addColGroup = document.createElement('div');
+        addColGroup.className = 'add-column-group';
+        
+        const colNameInput = document.createElement('input');
+        colNameInput.type = 'text';
+        colNameInput.placeholder = 'col name';
+        colNameInput.size = 10;
+        
+        const colTypeSelect = document.createElement('select');
+        ['string', 'number', 'boolean', 'array', 'link'].forEach(type => {
+          const opt = document.createElement('option');
+          opt.value = type;
+          opt.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+          colTypeSelect.appendChild(opt);
+        });
+        
+        const colTargetSelect = document.createElement('select');
+        colTargetSelect.style.display = 'none';
+        colTargetSelect.style.width = '120px';
+        const allTables = Object.values(this.model.tables);
+        const currentTableId = this.model.currentTableId;
+        allTables.forEach(table => {
+          if (table.id !== currentTableId) {
+            const opt = document.createElement('option');
+            opt.value = table.id;
+            opt.textContent = table.name;
+            colTargetSelect.appendChild(opt);
+          }
+        });
+        if (colTargetSelect.options.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'No other tables';
+          opt.disabled = true;
+          colTargetSelect.appendChild(opt);
+        }
+        
+        colTypeSelect.addEventListener('change', () => {
+          if (colTypeSelect.value === 'link') {
+            colTargetSelect.style.display = 'inline-block';
+          } else {
+            colTargetSelect.style.display = 'none';
+          }
+        });
+        
+        const addColBtn = document.createElement('button');
+        addColBtn.className = 'btn btn-primary btn-sm';
+        addColBtn.textContent = '+ Column';
+        addColBtn.addEventListener('click', () => {
+          this.handleAddColumn(colNameInput, colTypeSelect, colTargetSelect);
+        });
+        
+        addColGroup.appendChild(colNameInput);
+        addColGroup.appendChild(colTypeSelect);
+        addColGroup.appendChild(colTargetSelect);
+        addColGroup.appendChild(addColBtn);
+        rightDiv.appendChild(addColGroup);
+        
+        header.appendChild(rightDiv);
+        this.container.appendChild(header);
+      }
+
+      renderTable() {
+        const currentTable = this.model.getCurrentTable();
+        if (!currentTable) {
+          const empty = document.createElement('div');
+          empty.className = 'empty-state';
+          empty.textContent = 'No tables available. Create one!';
+          this.container.appendChild(empty);
+          return;
+        }
+
+        const propDefs = currentTable.properties;
+        const numCols = propDefs.length + 1;
+
+        if (this.columnWidths.length !== numCols) {
+          const widths = [40];
+          const defaultWidth = Math.max(150, Math.floor(600 / Math.max(1, propDefs.length)));
+          for (let i = 0; i < propDefs.length; i++) {
+            widths.push(defaultWidth);
+          }
+          this.columnWidths = widths;
+          this.tableWidth = this.columnWidths.reduce((a, b) => a + b, 0);
+        }
+
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        this.table = table;
+
+        const colGroup = document.createElement('colgroup');
+        const colDelete = document.createElement('col');
+        colDelete.style.width = '40px';
+        colDelete.style.minWidth = '40px';
+        colDelete.style.maxWidth = '40px';
+        colGroup.appendChild(colDelete);
+
+        for (let i = 0; i < propDefs.length; i++) {
+          const col = document.createElement('col');
+          if (i < propDefs.length - 1) {
+            const width = this.columnWidths[i + 1] || 120;
+            col.style.width = width + 'px';
+            col.style.minWidth = width + 'px';
+            col.style.maxWidth = width + 'px';
+          } else {
+            col.style.width = 'auto';
+            col.style.minWidth = '150px';
+            col.style.maxWidth = 'none';
+          }
+          colGroup.appendChild(col);
+        }
+        table.appendChild(colGroup);
+        this.colGroup = colGroup;
+
+        const totalWidth = this.columnWidths.reduce((a, b) => a + b, 0);
+        table.style.minWidth = totalWidth + 'px';
+
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+
+        const thDelete = document.createElement('th');
+        thDelete.style.minWidth = '40px';
+        thDelete.style.maxWidth = '40px';
+        thDelete.style.width = '40px';
+        thDelete.style.textAlign = 'center';
+        thDelete.style.padding = '4px 2px';
+        thDelete.style.verticalAlign = 'middle';
+        thDelete.style.fontSize = '10px';
+        thDelete.style.color = '#94a3b8';
+        thDelete.textContent = '✕';
+        headerRow.appendChild(thDelete);
+
+        propDefs.forEach((propDef, idx) => {
+          const th = document.createElement('th');
+          const colIndex = idx + 1;
+
+          const contentDiv = document.createElement('div');
+          contentDiv.className = 'col-header-content';
+
+          const typeSpan = document.createElement('span');
+          typeSpan.className = 'col-type';
+          let typeLabel = propDef.type;
+          if (propDef.type === 'link' && propDef.targetTable) {
+            const targetName = this.model.getTableNameById(propDef.targetTable) || 'unknown';
+            typeLabel = `link → ${targetName}`;
+          }
+          typeSpan.textContent = typeLabel;
+          contentDiv.appendChild(typeSpan);
+
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'col-name';
+          nameSpan.textContent = propDef.name;
+          contentDiv.appendChild(nameSpan);
+
+          const deleteWrapper = document.createElement('div');
+          const delBtn = document.createElement('button');
+          delBtn.className = 'col-delete-btn';
+          delBtn.textContent = '✕';
+          delBtn.title = `Delete column "${propDef.name}"`;
+          delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm(`Delete column "${propDef.name}"?`)) {
+              const table = this.model.getCurrentTable();
+              if (table) {
+                table.deleteColumn(propDef.name);
+                this.columnWidths = [];
+              }
+            }
+          });
+          deleteWrapper.appendChild(delBtn);
+          contentDiv.appendChild(deleteWrapper);
+
+          th.appendChild(contentDiv);
+          th.dataset.colIndex = colIndex;
+
+          if (idx < propDefs.length - 1) {
+            const resizer = document.createElement('div');
+            resizer.className = 'resizer';
+            resizer.dataset.colIndex = colIndex;
+            resizer.addEventListener('mousedown', this.handleResizeStart);
+            th.appendChild(resizer);
+          }
+
+          headerRow.appendChild(th);
+        });
+
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+        const instances = currentTable.instances;
+
+        if (instances.length === 0) {
+          const emptyRow = document.createElement('tr');
+          const emptyCell = document.createElement('td');
+          emptyCell.setAttribute('colspan', propDefs.length + 1);
+          emptyCell.className = 'empty-state';
+          emptyCell.textContent = '✨ No rows yet. Click "+ Instance" to add one.';
+          emptyRow.appendChild(emptyCell);
+          tbody.appendChild(emptyRow);
+        } else {
+          instances.forEach((row, rowIndex) => {
+            const tr = document.createElement('tr');
+
+            const tdDelete = document.createElement('td');
+            tdDelete.className = 'row-delete-cell';
+            const delBtn = document.createElement('button');
+            delBtn.className = 'row-delete-btn';
+            delBtn.textContent = '✕';
+            delBtn.title = 'Delete row';
+            delBtn.addEventListener('click', () => {
+              if (confirm(`Delete row ${rowIndex + 1}?`)) {
+                const table = this.model.getCurrentTable();
+                if (table) {
+                  table.deleteInstance(rowIndex);
+                }
+              }
+            });
+            tdDelete.appendChild(delBtn);
+            tr.appendChild(tdDelete);
+
+            propDefs.forEach((propDef) => {
+              const td = document.createElement('td');
+              td.className = 'editable-cell';
+              td.dataset.rowIndex = rowIndex;
+              td.dataset.propName = propDef.name;
+
+              const value = row[propDef.name] !== undefined ? row[propDef.name] : currentTable.getDefaultForType(propDef.type);
+
+              const contentSpan = document.createElement('span');
+              contentSpan.className = 'cell-content';
+              contentSpan.textContent = value !== undefined && value !== null ? String(value) : '—';
+              td.appendChild(contentSpan);
+              td.dataset.rawValue = JSON.stringify(value);
+
+              tr.appendChild(td);
+            });
+
+            tbody.appendChild(tr);
+          });
+        }
+
+        table.appendChild(tbody);
+        this.container.appendChild(table);
+
+        this.container.querySelectorAll('.editable-cell').forEach(cell => {
+          cell.addEventListener('dblclick', this.handleDoubleClick);
+        });
+
+        this.container.querySelectorAll('tr').forEach(tr => {
+          tr.addEventListener('mouseenter', () => {
+            const firstTd = tr.querySelector('td:first-child');
+            if (firstTd) firstTd.style.background = '#f6faff';
+          });
+          tr.addEventListener('mouseleave', () => {
+            const firstTd = tr.querySelector('td:first-child');
+            if (firstTd) firstTd.style.background = 'white';
+          });
+        });
+      }
+
+      handleTableSelectorChange(e) {
+        const tableId = e.target.value;
+        if (this.model.switchTable(tableId)) {
+          this.columnWidths = [];
+        }
+      }
+
+      handleAddInstance() {
+        const table = this.model.getCurrentTable();
+        if (table) {
+          table.addInstance(table.createDefaultRow());
+        }
+      }
+
+      handleAddColumn(colNameInput, colTypeSelect, colTargetSelect) {
+        const name = colNameInput.value.trim();
+        const type = colTypeSelect.value;
+        if (!name) {
+          alert('Please enter a column name.');
+          return;
+        }
+        const table = this.model.getCurrentTable();
+        if (table) {
+          const property = { name, type };
+          if (type === 'link') {
+            const targetTable = colTargetSelect.value;
+            if (!targetTable) {
+              alert('Please select a target table for the link column.');
+              return;
+            }
+            property.targetTable = targetTable;
+          }
+          const success = table.addColumn(property);
+          if (success) {
+            colNameInput.value = '';
+            this.columnWidths = [];
+          } else {
+            alert(`Column "${name}" already exists.`);
+          }
+        }
+      }
+
+      handleDoubleClick(e) {
+        // Simplified: just log for now
+        console.log('Double-click on cell:', e.currentTarget.dataset);
+      }
+
+      handleBlur(e) {}
+      handleKeyDown(e) {}
+      handleResizeStart(e) {}
+      handleResizeMove(e) {}
+      handleResizeEnd(e) {}
+
+      destroy() {
+        if (this.unsubscribe) {
+          this.unsubscribe();
+        }
+        document.removeEventListener('mousemove', this.handleResizeMove);
+        document.removeEventListener('mouseup', this.handleResizeEnd);
+      }
+    }
+
+    // --------------------------------------------------------------
+    // APP
+    // --------------------------------------------------------------
+    const model = new Model();
+
+    // Initialize data
+    const productProps = [
+      { name: 'id', type: 'number' },
+      { name: 'name', type: 'string' },
+      { name: 'price', type: 'number' },
+      { name: 'inStock', type: 'boolean' },
+      { name: 'tags', type: 'array' }
+    ];
+    const productRows = [
+      { id: 101, name: 'Wireless Mouse', price: 29.99, inStock: true, tags: ['electronics', 'wireless'] },
+      { id: 102, name: 'Gaming Keyboard', price: 79.50, inStock: false, tags: ['gaming', 'mechanical'] },
+      { id: 103, name: 'USB-C Hub', price: 45.00, inStock: true, tags: ['adapter', 'usb'] },
+      { id: 104, name: 'Monitor Stand', price: 34.99, inStock: true, tags: ['ergonomic', 'desk'] },
+      { id: 105, name: 'Bluetooth Speaker', price: 59.99, inStock: false, tags: ['audio', 'portable'] }
+    ];
+    const productTableId = model.addTable('Products', productProps, productRows);
+    
+    const supplierProps = [
+      { name: 'id', type: 'string' },
+      { name: 'company', type: 'string' },
+      { name: 'country', type: 'string' },
+      { name: 'active', type: 'boolean' }
+    ];
+    const supplierRows = [
+      { id: 'S1', company: 'TechSupply Co', country: 'USA', active: true },
+      { id: 'S2', company: 'GlobalParts Ltd', country: 'UK', active: true },
+      { id: 'S3', company: 'AsiaTrade Inc', country: 'China', active: false }
+    ];
+    const supplierTableId = model.addTable('Suppliers', supplierProps, supplierRows);
+    
+    const products = model.getTable(productTableId);
+    if (products) {
+      products.addColumn({
+        name: 'supplierId',
+        type: 'link',
+        targetTable: supplierTableId
+      });
+      
+      const suppliers = model.getTable(supplierTableId);
+      if (suppliers) {
+        const supplierIds = suppliers.instances.map(s => s.id);
+        products.instances.forEach((row, idx) => {
+          row.supplierId = supplierIds[idx % supplierIds.length];
+        });
+        model.notify();
+      }
+    }
+
+    // Initialize views
+    const treeContainer = document.getElementById('tree-view-container');
+    const propertyContainer = document.getElementById('property-view-container');
+    const tableContainer = document.getElementById('table-view-container');
+
+    console.log('Containers:', {
+      tree: !!treeContainer,
+      property: !!propertyContainer,
+      table: !!tableContainer
+    });
+
+    const treeView = new TreeView(treeContainer, model);
+    const propertyView = new PropertyView(propertyContainer, model);
+    const tableView = new TableView(tableContainer, model);
+
+    // Connect TreeView to PropertyView
+    treeView.onSelect = (instanceId, tableId) => {
+      propertyView.selectInstance(instanceId, tableId);
+    };
+
+    // View switching
+    document.querySelectorAll('.view-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        const view = tab.dataset.view;
+        const treeContainer = document.getElementById('tree-view-container');
+        const propertyContainer = document.getElementById('property-view-container');
+        const tableContainer = document.getElementById('table-view-container');
+        
+        if (view === 'tree') {
+          treeContainer.style.display = 'block';
+          propertyContainer.style.display = 'block';
+          tableContainer.style.display = 'none';
+        } else {
+          treeContainer.style.display = 'none';
+          propertyContainer.style.display = 'none';
+          tableContainer.style.display = 'block';
+        }
+      });
+    });
+
+    console.log('✅ Data Explorer ready!');
+    console.log('🌳 Model tables:', Object.keys(model.tables));
+  </script>
+</body>
+</html>

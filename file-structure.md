@@ -1,0 +1,15 @@
+src/
+    model/
+        model.js
+        type.js 
+        uuid.js 
+    tableview/
+        tableview.css
+        tableview.js
+    treeview/
+        propertyview.css
+        propertyview.js
+        treeview.css
+        treeview.js
+    app.js
+index.html

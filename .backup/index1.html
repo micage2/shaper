@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Explorer</title>
+  
+  <!-- TreeView Styles -->
+  <link rel="stylesheet" href="src/TreeView/treeview.css">
+  <link rel="stylesheet" href="src/TreeView/propertyview.css">
+  
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f0f2f6;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    #app {
+      width: 1200px;
+      max-width: 98vw;
+      height: 700px;
+      max-height: 98vh;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #e6edf4;
+    }
+    
+    #titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid #eef2f7;
+      background: #fafcff;
+      flex-shrink: 0;
+    }
+    
+    #titlebar h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1c2f44;
+    }
+    
+    #titlebar .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .btn {
+      padding: 6px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+    
+    .btn-secondary {
+      background: #eef3f9;
+      color: #1c2f44;
+    }
+    
+    .btn-secondary:hover {
+      background: #dce5ef;
+    }
+    
+    #split-view {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    #tree-view-container {
+      width: 40%;
+      min-width: 250px;
+      overflow: auto;
+      border-right: 1px solid #eef2f7;
+      flex-shrink: 0;
+    }
+    
+    #property-view-container {
+      flex: 1;
+      overflow: auto;
+    }
+    
+    #table-view-container {
+      flex: 1;
+      overflow: auto;
+      display: none;
+    }
+    
+    .view-tabs {
+      display: flex;
+      gap: 4px;
+      background: #eef3f9;
+      border-radius: 8px;
+      padding: 3px;
+    }
+    
+    .view-tab {
+      padding: 4px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      background: transparent;
+      color: #6a7f9b;
+      transition: all 0.15s;
+    }
+    
+    .view-tab.active {
+      background: white;
+      color: #1c2f44;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .view-tab:hover:not(.active) {
+      color: #1c2f44;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="titlebar">
+      <h1>📊 Data Explorer</h1>
+      <div class="controls">
+        <div class="view-tabs">
+          <button class="view-tab active" data-view="tree">Tree</button>
+          <button class="view-tab" data-view="table">Table</button>
+        </div>
+        <button class="btn btn-secondary" id="exportBtn">📥 Export</button>
+        <button class="btn btn-secondary" id="importBtn">📤 Import</button>
+      </div>
+    </div>
+    
+    <div id="split-view">
+      <div id="tree-view-container"></div>
+      <div id="property-view-container"></div>
+      <div id="table-view-container"></div>
+    </div>
+  </div>
+  
+  <script type="module">
+    import { App } from './src/app.js';
+    
+    const app = new App();
+    
+    // View switching
+    document.querySelectorAll('.view-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        const view = tab.dataset.view;
+        const treeContainer = document.getElementById('tree-view-container');
+        const propertyContainer = document.getElementById('property-view-container');
+        const tableContainer = document.getElementById('table-view-container');
+        
+        if (view === 'tree') {
+          treeContainer.style.display = 'block';
+          propertyContainer.style.display = 'block';
+          tableContainer.style.display = 'none';
+        } else {
+          treeContainer.style.display = 'none';
+          propertyContainer.style.display = 'none';
+          tableContainer.style.display = 'block';
+        }
+      });
+    });
+    
+    // Export/Import placeholders
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const data = JSON.stringify(app.model, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    
+    console.log('✅ Data Explorer ready!');
+  </script>
+</body>
+</html>
