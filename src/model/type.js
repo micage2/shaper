@@ -29,13 +29,6 @@ export class Type {
         return true;
     }
 
-    deleteInstanceById(instanceId) {
-        const index = this.instances.findIndex(row => row.id === instanceId);
-        if (index === -1) return false;
-        this.instances.splice(index, 1);
-        return true;
-    }
-
     updateCell(rowIndex, propertyName, newValue) {
         if (rowIndex < 0 || rowIndex >= this.instances.length) return false;
         const row = this.instances[rowIndex];
@@ -48,12 +41,6 @@ export class Type {
             return false;
         }
         return true;
-    }
-
-    updateCellById(instanceId, propertyName, newValue) {
-        const index = this.instances.findIndex(row => row.id === instanceId);
-        if (index === -1) return false;
-        return this.updateCell(index, propertyName, newValue);
     }
 
     coerceValue(value, type, propDef = null) {
@@ -80,7 +67,6 @@ export class Type {
                 return [String(value)];
             }
             case 'link': {
-                // For links, only allow valid UUIDs or null
                 if (!value || value === '') return null;
                 return String(value);
             }
@@ -140,16 +126,8 @@ export class Type {
         return this.properties.find(p => p.name === name);
     }
 
-    getPropertyById(id) {
-        return this.properties.find(p => p.id === id);
-    }
-
     getPropertyNames() {
         return this.properties.map(p => p.name);
-    }
-
-    getPropertyTypes() {
-        return this.properties.map(p => p.type);
     }
 
     rowCount() {
@@ -164,7 +142,6 @@ export class Type {
         return row;
     }
 
-    // Find link columns that reference a specific table
     findLinkColumnsReferencing(tableId) {
         return this.properties.filter(p =>
             p.type === 'link' && p.targetTable === tableId

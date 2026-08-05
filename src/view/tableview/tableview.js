@@ -1,4 +1,3 @@
-// src/tableview/tableview.js
 export class TableView {
     constructor(container, model) {
         this.container = container;
@@ -35,13 +34,8 @@ export class TableView {
     }
 
     render() {
-        // Clear container
         this.container.innerHTML = '';
-
-        // Render header (toolbar)
         this.renderHeader();
-
-        // Render table
         this.renderTable();
     }
 
@@ -52,16 +46,15 @@ export class TableView {
         const header = document.createElement('div');
         header.className = 'tableview-header';
 
-        // Left side: Table selector + controls
         const leftDiv = document.createElement('div');
         leftDiv.className = 'tableview-header-left';
 
-        // Table selector
         const select = document.createElement('select');
         select.className = 'table-selector';
         tableNames.forEach(name => {
             const option = document.createElement('option');
-            option.value = this.model.getTableIdByName(name);
+            const tableId = this.model.getTableIdByName(name);
+            option.value = tableId;
             option.textContent = name;
             const table = this.model.getTableByName(name);
             if (table && table.id === this.model.currentTableId) {
@@ -72,7 +65,6 @@ export class TableView {
         select.addEventListener('change', this.handleTableSelectorChange);
         leftDiv.appendChild(select);
 
-        // Row count badge
         if (currentTable) {
             const count = document.createElement('span');
             count.className = 'badge-count';
@@ -80,7 +72,6 @@ export class TableView {
             leftDiv.appendChild(count);
         }
 
-        // Add instance button
         const addRowBtn = document.createElement('button');
         addRowBtn.className = 'btn btn-success btn-sm';
         addRowBtn.textContent = '+ Instance';
@@ -89,7 +80,6 @@ export class TableView {
 
         header.appendChild(leftDiv);
 
-        // Right side: Add column controls
         const rightDiv = document.createElement('div');
         rightDiv.className = 'tableview-header-right';
 
@@ -111,7 +101,6 @@ export class TableView {
             colTypeSelect.appendChild(opt);
         });
 
-        // Target table selector for link type
         const colTargetSelect = document.createElement('select');
         colTargetSelect.id = 'newColTarget';
         colTargetSelect.style.display = 'none';
@@ -145,7 +134,9 @@ export class TableView {
         const addColBtn = document.createElement('button');
         addColBtn.className = 'btn btn-primary btn-sm';
         addColBtn.textContent = '+ Column';
-        addColBtn.addEventListener('click', this.handleAddColumn.bind(this, colNameInput, colTypeSelect, colTargetSelect));
+        addColBtn.addEventListener('click', () => {
+            this.handleAddColumn(colNameInput, colTypeSelect, colTargetSelect);
+        });
 
         addColGroup.appendChild(colNameInput);
         addColGroup.appendChild(colTypeSelect);
@@ -168,9 +159,8 @@ export class TableView {
         }
 
         const propDefs = currentTable.properties;
-        const numCols = propDefs.length + 1; // +1 for delete column
+        const numCols = propDefs.length + 1;
 
-        // Initialize column widths
         if (this.columnWidths.length !== numCols) {
             const widths = [40];
             const defaultWidth = Math.max(150, Math.floor(600 / Math.max(1, propDefs.length)));
@@ -185,7 +175,6 @@ export class TableView {
         table.className = 'data-table';
         this.table = table;
 
-        // Colgroup
         const colGroup = document.createElement('colgroup');
         const colDelete = document.createElement('col');
         colDelete.style.width = '40px';
@@ -213,24 +202,21 @@ export class TableView {
         const totalWidth = this.columnWidths.reduce((a, b) => a + b, 0);
         table.style.minWidth = totalWidth + 'px';
 
-        // Thead
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
 
-        // Delete column header
         const thDelete = document.createElement('th');
         thDelete.style.minWidth = '40px';
         thDelete.style.maxWidth = '40px';
         thDelete.style.width = '40px';
         thDelete.style.textAlign = 'center';
-        thDelete.style.padding = '0.3rem 0.2rem';
+        thDelete.style.padding = '4px 2px';
         thDelete.style.verticalAlign = 'middle';
-        thDelete.style.fontSize = '0.7rem';
+        thDelete.style.fontSize = '10px';
         thDelete.style.color = '#94a3b8';
         thDelete.textContent = '✕';
         headerRow.appendChild(thDelete);
 
-        // Data columns
         propDefs.forEach((propDef, idx) => {
             const th = document.createElement('th');
             const colIndex = idx + 1;
@@ -238,7 +224,6 @@ export class TableView {
             const contentDiv = document.createElement('div');
             contentDiv.className = 'col-header-content';
 
-            // Type hint
             const typeSpan = document.createElement('span');
             typeSpan.className = 'col-type';
             let typeLabel = propDef.type;
@@ -249,13 +234,11 @@ export class TableView {
             typeSpan.textContent = typeLabel;
             contentDiv.appendChild(typeSpan);
 
-            // Column name
             const nameSpan = document.createElement('span');
             nameSpan.className = 'col-name';
             nameSpan.textContent = propDef.name;
             contentDiv.appendChild(nameSpan);
 
-            // Delete button
             const deleteWrapper = document.createElement('div');
             deleteWrapper.className = 'col-delete-wrapper';
             const delBtn = document.createElement('button');
@@ -267,9 +250,16 @@ export class TableView {
                 if (confirm(`Delete column "${propDef.name}"? This will remove all data in this column.`)) {
                     const table = this.model.getCurrentTable();
                     if (table) {
-                        table.deleteColumn(propDef.name);
-                        this.columnWidths = [];
-                        // Model.notify() will trigger re-render
+                        const result = this.model.execute({
+                            type: 'DELETE_COLUMN',
+                            tableId: table.id,
+                            propertyName: propDef.name
+                        });
+                        if (result.success) {
+                            this.columnWidths = [];
+                        } else {
+                            alert(result.error);
+                        }
                     }
                 }
             });
@@ -279,7 +269,6 @@ export class TableView {
             th.appendChild(contentDiv);
             th.dataset.colIndex = colIndex;
 
-            // Resizer (not on last column)
             if (idx < propDefs.length - 1) {
                 const resizer = document.createElement('div');
                 resizer.className = 'resizer';
@@ -294,7 +283,6 @@ export class TableView {
         thead.appendChild(headerRow);
         table.appendChild(thead);
 
-        // Tbody
         const tbody = document.createElement('tbody');
         const instances = currentTable.instances;
 
@@ -306,11 +294,11 @@ export class TableView {
             emptyCell.textContent = '✨ No rows yet. Click "+ Instance" to add one.';
             emptyRow.appendChild(emptyCell);
             tbody.appendChild(emptyRow);
-        } else {
+        }
+        else {
             instances.forEach((row, rowIndex) => {
                 const tr = document.createElement('tr');
 
-                // Delete cell
                 const tdDelete = document.createElement('td');
                 tdDelete.className = 'row-delete-cell';
                 const delBtn = document.createElement('button');
@@ -321,14 +309,23 @@ export class TableView {
                     if (confirm(`Delete row ${rowIndex + 1}?`)) {
                         const table = this.model.getCurrentTable();
                         if (table) {
-                            table.deleteInstance(rowIndex);
+                            const instance = table.instances[rowIndex];
+                            if (instance) {
+                                const result = this.model.execute({
+                                    type: 'DELETE_INSTANCE',
+                                    tableId: table.id,
+                                    instanceId: instance.id
+                                });
+                                if (!result.success) {
+                                    alert(result.error);
+                                }
+                            }
                         }
                     }
                 });
                 tdDelete.appendChild(delBtn);
                 tr.appendChild(tdDelete);
 
-                // Data cells
                 propDefs.forEach((propDef) => {
                     const td = document.createElement('td');
                     td.className = 'editable-cell';
@@ -353,12 +350,10 @@ export class TableView {
         table.appendChild(tbody);
         this.container.appendChild(table);
 
-        // Attach event listeners
         this.container.querySelectorAll('.editable-cell').forEach(cell => {
             cell.addEventListener('dblclick', this.handleDoubleClick);
         });
 
-        // Sticky cell hover
         this.container.querySelectorAll('tr').forEach(tr => {
             tr.addEventListener('mouseenter', () => {
                 const firstTd = tr.querySelector('td:first-child');
@@ -408,7 +403,11 @@ export class TableView {
     handleAddInstance() {
         const table = this.model.getCurrentTable();
         if (table) {
-            table.addInstance(table.createDefaultRow());
+            this.model.execute({
+                type: 'ADD_INSTANCE',
+                tableId: table.id,
+                data: table.createDefaultRow()
+            });
         }
     }
 
@@ -430,12 +429,16 @@ export class TableView {
                 }
                 property.targetTable = targetTable;
             }
-            const success = table.addColumn(property);
-            if (success) {
+            const result = this.model.execute({
+                type: 'ADD_COLUMN',
+                tableId: table.id,
+                property: property
+            });
+            if (result.success) {
                 colNameInput.value = '';
                 this.columnWidths = [];
             } else {
-                alert(`Column "${name}" already exists.`);
+                alert(result.error);
             }
         }
     }
@@ -558,20 +561,29 @@ export class TableView {
                             coerced = isNaN(num) ? 0 : num;
                         } else if (propDef.type === 'link') {
                             coerced = raw || null;
-                            if (coerced && propDef.targetTable) {
-                                const targetTable = this.model.getTable(propDef.targetTable);
-                                if (targetTable) {
-                                    const exists = targetTable.instances.some(instance => instance.id === coerced);
-                                    if (!exists) throw new Error('Linked record not found');
-                                }
-                            }
                         } else {
                             coerced = String(raw);
                         }
-                        const success = currentTable.updateCell(rowIndex, propName, coerced);
-                        if (success) newValue = currentTable.instances[rowIndex][propName];
-                        else newValue = originalValue;
-                    } catch (_) { newValue = originalValue; }
+
+                        const instance = currentTable.instances[rowIndex];
+                        if (instance) {
+                            const result = this.model.execute({
+                                type: 'UPDATE_CELL',
+                                tableId: currentTable.id,
+                                instanceId: instance.id,
+                                property: propName,
+                                value: coerced
+                            });
+                            if (result.success) {
+                                newValue = currentTable.instances[rowIndex][propName];
+                            } else {
+                                alert(`Failed to update: ${result.error}`);
+                                newValue = originalValue;
+                            }
+                        }
+                    } catch (_) {
+                        newValue = originalValue;
+                    }
                 }
             }
         }

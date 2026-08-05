@@ -1,0 +1,127 @@
+/* src/app.css */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f0f2f6;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#app {
+    width: 1200px;
+    max-width: 98vw;
+    height: 700px;
+    max-height: 98vh;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #e6edf4;
+}
+
+#titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border-bottom: 1px solid #eef2f7;
+    background: #fafcff;
+    flex-shrink: 0;
+}
+
+#titlebar h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1c2f44;
+}
+
+#titlebar .controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.view-tabs {
+    display: flex;
+    gap: 4px;
+    background: #eef3f9;
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.view-tab {
+    padding: 4px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    background: transparent;
+    color: #6a7f9b;
+    transition: all 0.15s;
+}
+
+.view-tab.active {
+    background: white;
+    color: #1c2f44;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.view-tab:hover:not(.active) {
+    color: #1c2f44;
+}
+
+#split-view {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+#tree-view-container {
+    width: 40%;
+    min-width: 250px;
+    overflow: auto;
+    border-right: 1px solid #eef2f7;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+#property-view-container {
+    flex: 1;
+    overflow: auto;
+}
+
+#table-view-container {
+    flex: 1;
+    overflow: auto;
+    display: none;
+}
+
+.btn {
+    padding: 4px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-secondary {
+    background: #eef3f9;
+    color: #1c2f44;
+}
+
+.btn-secondary:hover {
+    background: #dce5ef;
+}

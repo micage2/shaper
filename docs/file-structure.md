@@ -1,15 +1,22 @@
-src/
+datamodeller/
+  docs/
+    file-structure.md
+    git-help.md
+    temp-snippets.md
+  index.html
+  README.md
+  src/
+    app.js
     model/
-        model.js
-        type.js 
-        uuid.js 
-    tableview/
+      model.js
+      type.js
+      uuid.js
+    view/
+      tableview/
         tableview.css
         tableview.js
-    treeview/
+      treeview/
         propertyview.css
         propertyview.js
         treeview.css
         treeview.js
-    app.js
-index.html
