@@ -237,7 +237,17 @@ export class TableView {
             const nameSpan = document.createElement('span');
             nameSpan.className = 'col-name';
             nameSpan.textContent = propDef.name;
+            nameSpan.dataset.propName = propDef.name;
             contentDiv.appendChild(nameSpan);
+
+            // Add double-click to rename
+            nameSpan.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                this.startColumnRename(nameSpan, propDef);
+            });
+
+
+
 
             const deleteWrapper = document.createElement('div');
             deleteWrapper.className = 'col-delete-wrapper';
@@ -366,6 +376,100 @@ export class TableView {
         });
     }
 
+    startColumnRename(labelElement, propDef) {
+        if (this.editingColumn) return;
+        
+        const currentName = propDef.name;
+        const content = labelElement.closest('.col-header-content');
+        if (!content) return;
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'column-name-editor';
+        input.value = currentName;
+        input.dataset.propName = propDef.name;
+        
+        labelElement.style.display = 'none';
+        content.insertBefore(input, labelElement);
+        
+        input.focus();
+        input.select();
+        
+        this.editingColumn = {
+            labelElement: labelElement,
+            inputElement: input,
+            propDef: propDef,
+            originalValue: currentName,
+            isFinished: false  // ← Add this flag
+        };
+        
+        input.addEventListener('blur', () => {
+            this.finishColumnRename(false);
+        });
+        
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.finishColumnRename(false);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                this.finishColumnRename(true);
+            }
+        });
+    }
+    
+    finishColumnRename(cancel = false) {
+        if (!this.editingColumn) return;
+        
+        // Prevent double execution
+        if (this.editingColumn.isFinished) return;
+        this.editingColumn.isFinished = true;
+        
+        const { labelElement, inputElement, propDef, originalValue } = this.editingColumn;
+        
+        let newName = originalValue;
+        if (!cancel) {
+            const value = inputElement.value.trim();
+            if (value && value !== originalValue) {
+                const table = this.model.getCurrentTable();
+                if (table) {
+                    // Check if column name already exists (excluding itself)
+                    const exists = table.properties.some(p => p.name === value && p.name !== originalValue);
+                    if (exists) {
+                        alert(`Column "${value}" already exists.`);
+                        // Reset flag so user can try again
+                        this.editingColumn.isFinished = false;
+                        // Keep editing
+                        inputElement.focus();
+                        inputElement.select();
+                        return;
+                    }
+                    
+                    const result = this.model.execute({
+                        type: 'RENAME_COLUMN',
+                        tableId: table.id,
+                        oldName: originalValue,
+                        newName: value
+                    });
+                    
+                    if (result.success) {
+                        newName = value;
+                        labelElement.textContent = value;
+                        labelElement.dataset.propName = value;
+                        propDef.name = value;
+                        this.columnWidths = [];
+                    } else {
+                        alert(`Failed to rename: ${result.error}`);
+                    }
+                }
+            }
+        }
+        
+        inputElement.remove();
+        labelElement.style.display = '';
+        this.editingColumn = null;
+    }
+    
     formatValue(value, propDef) {
         if (value === null || value === undefined || value === '') {
             return '<span class="empty-value">—</span>';

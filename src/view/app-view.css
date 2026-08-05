@@ -125,3 +125,45 @@ body {
 .btn-secondary:hover {
     background: #dce5ef;
 }
+
+/* Move view tabs to center */
+#titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border-bottom: 1px solid #eef2f7;
+    background: #fafcff;
+    flex-shrink: 0;
+}
+
+#titlebar h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1c2f44;
+    flex: 0 0 auto;
+}
+
+#titlebar .controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex: 1;
+}
+
+.view-tabs {
+    display: flex;
+    gap: 4px;
+    background: #eef3f9;
+    border-radius: 8px;
+    padding: 3px;
+    margin: 0 auto;  /* ← This centers it */
+}
+
+/* Right side controls (Export/Import) should be on the right */
+#titlebar .controls-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-left: auto;  /* ← Pushes to the right */
+}

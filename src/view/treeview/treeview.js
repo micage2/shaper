@@ -164,16 +164,68 @@ export class TreeView {
             content.classList.add('selected');
         }
 
-        // Click to select
+        // Track click state at the instance level, not global
+        let clickTimeout = null;
+
+        // content.addEventListener('click', (e) => {
+        //     // Ignore if editing
+        //     if (this.editingNode) {
+        //         e.stopPropagation();
+        //         return;
+        //     }
+
+        //     // If we have a pending timeout, this is a double-click
+        //     if (clickTimeout) {
+        //         clearTimeout(clickTimeout);
+        //         clickTimeout = null;
+        //         // This was a double-click, handled by dblclick event
+        //         return;
+        //     }
+
+        //     // Set timeout for single click
+        //     clickTimeout = setTimeout(() => {
+        //         clickTimeout = null;
+        //         // Only select if not editing and still the same node
+        //         if (!this.editingNode) {
+        //             this.selectInstance(instance.id, instance._tableId);
+        //         }
+        //     }, 200);
+        // });
+
+        // content.addEventListener('dblclick', (e) => {
+        //     e.stopPropagation();
+        //     e.preventDefault();
+
+        //     // Clear any pending single-click
+        //     if (clickTimeout) {
+        //         clearTimeout(clickTimeout);
+        //         clickTimeout = null;
+        //     }
+
+        //     // Don't edit if already editing
+        //     if (this.editingNode) {
+        //         return;
+        //     }
+
+        //     // Find the label element (it's the first child after toggle/spacer)
+        //     const label = content.querySelector('.tree-label');
+        //     if (label) {
+        //         this.startEditing(instance, label);
+        //     }
+        // });
+
+
+        // Content click - just select
         content.addEventListener('click', (e) => {
-            // Ignore if we're editing
             if (this.editingNode) return;
+            // Don't stop propagation - let it bubble
             this.selectInstance(instance.id, instance._tableId);
         });
 
-        // Double-click to edit name
-        content.addEventListener('dblclick', (e) => {
-            e.stopPropagation();
+        // Label double-click - only edit the label
+        label.addEventListener('dblclick', (e) => {
+            // Don't stop propagation - let it bubble
+            if (this.editingNode) return;
             this.startEditing(instance, label);
         });
 
@@ -193,17 +245,45 @@ export class TreeView {
     }
 
     // ----- Selection -----
+    // selectInstance(instanceId, tableId) {
+    //     this.selectedInstanceId = instanceId;
+    //     this.selectedTableId = tableId;
+
+    //     if (this.onSelect) {
+    //         this.onSelect(instanceId, tableId);
+    //     }
+
+    //     this.render();
+    // }
     selectInstance(instanceId, tableId) {
+        // Update state
         this.selectedInstanceId = instanceId;
         this.selectedTableId = tableId;
-
+        
+        // Update DOM directly - NO RENDER
+        this.updateSelectionInDOM(instanceId);
+        
+        // Notify PropertyView
         if (this.onSelect) {
             this.onSelect(instanceId, tableId);
         }
-
-        this.render();
     }
 
+    updateSelectionInDOM(selectedId) {
+        // Remove all selections
+        this.container.querySelectorAll('.tree-node-content.selected')
+            .forEach(el => el.classList.remove('selected'));
+        
+        // Add selection to new node
+        if (selectedId) {
+            const node = this.container.querySelector(`[data-instance-id="${selectedId}"]`);
+            if (node) {
+                const content = node.querySelector('.tree-node-content');
+                if (content) content.classList.add('selected');
+            }
+        }
+    }   
+    
     toggleExpand(instanceId) {
         if (this.expandedIds.has(instanceId)) {
             this.expandedIds.delete(instanceId);
@@ -214,25 +294,116 @@ export class TreeView {
     }
 
     // ----- Editing Name -----
+    // startEditing(instance, labelElement) {
+    //     // Cancel any existing edit
+    //     if (this.editingNode) {
+    //         this.finishEditing(true);
+    //     }
+
+    //     const currentName = this.model.getDisplayName(instance);
+
+    //     // Find the name property or title property
+    //     const table = this.model.getTable(instance._tableId);
+    //     if (!table) return;
+
+    //     const propDef = table.getProperty('name') || table.getProperty('title');
+    //     if (!propDef) {
+    //         // No name or title property, can't edit
+    //         alert('This instance has no "name" or "title" property to edit.');
+    //         return;
+    //     }
+
+    //     // Create input
+    //     const input = document.createElement('input');
+    //     input.type = 'text';
+    //     input.className = 'tree-name-editor';
+    //     input.value = currentName;
+    //     input.dataset.instanceId = instance.id;
+    //     input.dataset.tableId = instance._tableId;
+    //     input.dataset.propName = propDef.name;
+
+    //     // Replace label with input
+    //     labelElement.replaceWith(input);
+    //     input.focus();
+    //     input.select();
+
+    //     this.editingNode = {
+    //         instanceId: instance.id,
+    //         tableId: instance._tableId,
+    //         propName: propDef.name,
+    //         inputElement: input,
+    //         originalValue: currentName
+    //     };
+
+    //     // Event listeners
+    //     input.addEventListener('blur', () => {
+    //         this.finishEditing(false);
+    //     });
+
+    //     input.addEventListener('keydown', (e) => {
+    //         if (e.key === 'Enter') {
+    //             e.preventDefault();
+    //             this.finishEditing(false);
+    //         } else if (e.key === 'Escape') {
+    //             e.preventDefault();
+    //             this.finishEditing(true);
+    //         }
+    //     });
+    // }
+
+    // finishEditing(cancel = false) {
+    //     if (!this.editingNode) return;
+
+    //     const { instanceId, tableId, propName, inputElement, originalValue } = this.editingNode;
+
+    //     let newValue = originalValue;
+    //     if (!cancel) {
+    //         const value = inputElement.value.trim();
+    //         if (value && value !== originalValue) {
+    //             const result = this.model.execute({
+    //                 type: 'RENAME_INSTANCE',
+    //                 tableId: tableId,
+    //                 instanceId: instanceId,
+    //                 newName: value,
+    //                 property: propName
+    //             });
+    //             if (result.success) {
+    //                 newValue = value;
+    //             } else {
+    //                 alert(`Failed to rename: ${result.error}`);
+    //             }
+    //         }
+    //     }
+
+    //     // Remove input and restore label
+    //     const displayName = cancel ? originalValue : newValue;
+    //     const label = document.createElement('span');
+    //     label.className = 'tree-label';
+    //     label.textContent = displayName;
+    //     label.dataset.instanceId = instanceId;
+    //     label.dataset.tableId = tableId;
+    //     inputElement.replaceWith(label);
+
+    //     this.editingNode = null;
+    // }
+
     startEditing(instance, labelElement) {
-        // Cancel any existing edit
-        if (this.editingNode) {
-            this.finishEditing(true);
-        }
-
+        if (this.editingNode) return;
+        
         const currentName = this.model.getDisplayName(instance);
-
-        // Find the name property or title property
         const table = this.model.getTable(instance._tableId);
         if (!table) return;
-
+        
         const propDef = table.getProperty('name') || table.getProperty('title');
         if (!propDef) {
-            // No name or title property, can't edit
             alert('This instance has no "name" or "title" property to edit.');
             return;
         }
-
+        
+        // Get the parent container (the tree-node-content)
+        const content = labelElement.closest('.tree-node-content');
+        if (!content) return;
+        
         // Create input
         const input = document.createElement('input');
         input.type = 'text';
@@ -241,25 +412,28 @@ export class TreeView {
         input.dataset.instanceId = instance.id;
         input.dataset.tableId = instance._tableId;
         input.dataset.propName = propDef.name;
-
-        // Replace label with input
-        labelElement.replaceWith(input);
+        
+        // Hide label, insert input next to it
+        labelElement.style.display = 'none';
+        content.insertBefore(input, labelElement);
+        
         input.focus();
         input.select();
-
+        
         this.editingNode = {
             instanceId: instance.id,
             tableId: instance._tableId,
             propName: propDef.name,
             inputElement: input,
+            labelElement: labelElement,
             originalValue: currentName
         };
-
+        
         // Event listeners
         input.addEventListener('blur', () => {
             this.finishEditing(false);
         });
-
+        
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -270,12 +444,12 @@ export class TreeView {
             }
         });
     }
-
+    
     finishEditing(cancel = false) {
         if (!this.editingNode) return;
-
-        const { instanceId, tableId, propName, inputElement, originalValue } = this.editingNode;
-
+        
+        const { instanceId, tableId, propName, inputElement, labelElement, originalValue } = this.editingNode;
+        
         let newValue = originalValue;
         if (!cancel) {
             const value = inputElement.value.trim();
@@ -289,24 +463,20 @@ export class TreeView {
                 });
                 if (result.success) {
                     newValue = value;
+                    labelElement.textContent = value;
                 } else {
                     alert(`Failed to rename: ${result.error}`);
                 }
             }
         }
-
-        // Remove input and restore label
-        const displayName = cancel ? originalValue : newValue;
-        const label = document.createElement('span');
-        label.className = 'tree-label';
-        label.textContent = displayName;
-        label.dataset.instanceId = instanceId;
-        label.dataset.tableId = tableId;
-        inputElement.replaceWith(label);
-
+        
+        // Remove input, show label
+        inputElement.remove();
+        labelElement.style.display = '';
+        
         this.editingNode = null;
     }
-
+        
     // ----- Toolbar Actions -----
     handleTypeChange(e) {
         // Just update the selection info

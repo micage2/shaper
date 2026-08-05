@@ -122,6 +122,20 @@
     width: 90px;
 }
 
+.column-name-editor {
+    font: inherit;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 1px 4px;
+    border: 2px solid #2563eb;
+    border-radius: 4px;
+    outline: none;
+    background: white;
+    width: 100%;
+    min-width: 60px;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
 /* Data Table */
 .data-table {
     border-collapse: separate;
@@ -418,3 +432,4 @@
 .table-scroll-wrapper::-webkit-scrollbar-thumb:hover {
     background: #a8bbd4;
 }
+

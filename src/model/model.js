@@ -279,6 +279,9 @@ export class Model {
             case 'RENAME_INSTANCE':
                 result = this._handleRenameInstance(command);
                 break;
+            case 'RENAME_COLUMN':
+                result = this._handleRenameColumn(command);
+                break;
             default:
                 return { success: false, error: `Unknown command: ${command.type}` };
         }
@@ -388,4 +391,31 @@ export class Model {
         table.instances[index][property] = String(newName);
         return { success: true };
     }
+
+    _handleRenameColumn(command) {
+        const { tableId, oldName, newName } = command;
+        const table = this.getTable(tableId);
+        if (!table) return { success: false, error: 'Table not found' };
+        
+        const propDef = table.getProperty(oldName);
+        if (!propDef) return { success: false, error: 'Column not found' };
+        
+        // Check if new name already exists (excluding this column)
+        if (table.properties.some(p => p.name === newName && p.name !== oldName)) {
+            return { success: false, error: 'Column name already exists' };
+        }
+        
+        // Update the property name
+        propDef.name = newName;
+        
+        // CRITICAL: Update all instances - rename the key in every row
+        for (const instance of table.instances) {
+            if (oldName in instance) {
+                instance[newName] = instance[oldName];
+                delete instance[oldName];
+            }
+        }
+        
+        return { success: true };
+    }    
 } // end class Model
