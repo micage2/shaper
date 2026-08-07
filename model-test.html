@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Round-Trip Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #f0f2f6;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { color: #1c2f44; }
+        .pass { color: #16a34a; font-weight: bold; }
+        .fail { color: #dc2626; font-weight: bold; }
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+            border: 1px solid #e6edf4;
+        }
+        .section h2 { margin-top: 0; font-size: 16px; }
+        pre {
+            background: #f8faff;
+            padding: 12px;
+            border-radius: 4px;
+            overflow: auto;
+            font-size: 12px;
+            max-height: 300px;
+        }
+        .summary {
+            background: #f8faff;
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔄 Round-Trip Serialization Test</h1>
+    <p>Tests: Model → JSON → Model → JSON. Verifies data integrity and link preservation.</p>
+    <div id="output"></div>
+
+    <script type="module">
+        import { Model } from '/src/model/model.js';
+
+        // Helper: deep comparison
+        function deepEqual(a, b, path = '') {
+            if (a === b) return { ok: true };
+            
+            if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') {
+                return { ok: false, path: path || 'root', expected: a, got: b };
+            }
+            
+            const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+            for (const key of keys) {
+                const result = deepEqual(a[key], b[key], path ? `${path}.${key}` : key);
+                if (!result.ok) return result;
+            }
+            return { ok: true };
+        }
+
+        // Setup
+        const model = new Model();
+
+        // ---- Build test data ----
+        console.log('📦 Building test data...');
+
+        // Table 1: City
+        const cityUuid = model.addTable('City', [
+            { name: 'name', type: 'string' },
+            { name: 'population', type: 'number' }
+        ]);
+        const city = model.getTable(cityUuid);
+        city.insertRow({ name: 'Dragonhold', population: 12000 });
+        city.insertRow({ name: "Baldur's Gate", population: 42000 });
+        city.insertRow({ name: 'Neverwinter', population: 23000 });
+
+        // Table 2: Building
+        const buildingUuid = model.addTable('Building', [
+            { name: 'name', type: 'string' },
+            { name: 'city', type: 'link', targetTable: cityUuid },
+            { name: 'type', type: 'string' }
+        ]);
+        const building = model.getTable(buildingUuid);
+        building.insertRow({ name: "Talon's Residence", city: 0, type: 'house' });
+        building.insertRow({ name: 'The Rusty Dagger Inn', city: 0, type: 'inn' });
+        building.insertRow({ name: 'Temple of the Old Gods', city: 0, type: 'temple' });
+        building.insertRow({ name: 'Sorcerous Sundries', city: 1, type: 'shop' });
+
+        // Table 3: Character
+        const charUuid = model.addTable('Character', [
+            { name: 'name', type: 'string' },
+            { name: 'building', type: 'link', targetTable: buildingUuid },
+            { name: 'level', type: 'number' }
+        ]);
+        const character = model.getTable(charUuid);
+        character.insertRow({ name: 'Talon', building: 0, level: 5 });
+        character.insertRow({ name: 'Greta', building: 1, level: 4 });
+        character.insertRow({ name: 'Ulric', building: 2, level: 6 });
+        character.insertRow({ name: 'Eldric', building: 3, level: 3 });
+
+        // Table 4: Weapon
+        const weaponUuid = model.addTable('Weapon', [
+            { name: 'name', type: 'string' },
+            { name: 'damage', type: 'number' },
+            { name: 'owner', type: 'link', targetTable: charUuid }
+        ]);
+        const weapon = model.getTable(weaponUuid);
+        weapon.insertRow({ name: "Talon's Bow", damage: 12, owner: 0 });
+        weapon.insertRow({ name: "Greta's Axe", damage: 18, owner: 1 });
+        weapon.insertRow({ name: "Ulric's Staff", damage: 8, owner: 2 });
+        weapon.insertRow({ name: "Eldric's Dagger", damage: 6, owner: 3 });
+        weapon.insertRow({ name: 'Dagger', damage: 4, owner: null });
+
+        console.log('✅ Test data built');
+
+        // ---- Save original state ----
+        const originalSnapshot = model.toJSON();
+
+        // ---- Round trip: export → JSON → import ----
+        console.log('🔄 Round trip: export → import...');
+
+        const jsonString = JSON.stringify(originalSnapshot, null, 2);
+        const importResult = model.fromJSON(JSON.parse(jsonString));
+
+        if (!importResult.success) {
+            document.getElementById('output').innerHTML = `
+                <div class="section">
+                    <h2 class="fail">❌ Import failed</h2>
+                    <pre>${importResult.error}</pre>
+                </div>
+            `;
+            throw new Error('Import failed');
+        }
+
+        console.log(`✅ Import: ${importResult.tableCount} tables, ${importResult.rowCount} rows`);
+
+        // ---- Compare snapshots ----
+        const newSnapshot = model.toJSON();
+
+        // ---- Deep compare ----
+        const diff = deepEqual(originalSnapshot, newSnapshot);
+
+        // ---- Build output ----
+        const output = document.getElementById('output');
+
+        // Summary
+        let html = `<div class="summary">`;
+
+        if (diff.ok) {
+            html += `<p class="pass">✅ Round-trip PASSED</p>`;
+            html += `<p>All data survived the export → import → export cycle.</p>`;
+        } else {
+            html += `<p class="fail">❌ Round-trip FAILED</p>`;
+            html += `<p>Difference found at: <code>${diff.path}</code></p>`;
+            html += `<p>Expected: <pre>${JSON.stringify(diff.expected, null, 2)}</pre></p>`;
+            html += `<p>Got: <pre>${JSON.stringify(diff.got, null, 2)}</pre></p>`;
+        }
+        html += `</div>`;
+
+        // Table count
+        html += `<div class="section">`;
+        html += `<h2>📊 Results</h2>`;
+        html += `<ul>`;
+        html += `<li>Original tables: ${originalSnapshot.tables.length}</li>`;
+        html += `<li>Imported tables: ${importResult.tableCount}</li>`;
+        html += `<li>Original rows: ${originalSnapshot.tables.reduce((s, t) => s + t.rows.length, 0)}</li>`;
+        html += `<li>Imported rows: ${importResult.rowCount}</li>`;
+        html += `<li>Tables match: ${originalSnapshot.tables.length === importResult.tableCount ? '✅' : '❌'}</li>`;
+        html += `<li>Rows match: ${originalSnapshot.tables.reduce((s, t) => s + t.rows.length, 0) === importResult.rowCount ? '✅' : '❌'}</li>`;
+        html += `</ul>`;
+        html += `</div>`;
+
+        // Link validation
+        html += `<div class="section">`;
+        html += `<h2>🔗 Link Validation</h2>`;
+        
+        let linkErrors = 0;
+        for (const [tableUuid, table] of Object.entries(model.tables)) {
+            const linkCols = table.columns.filter(c => c.type === 'link');
+            if (linkCols.length === 0) continue;
+            
+            for (const row of table.rows) {
+                for (const col of linkCols) {
+                    const linkValue = row[col.name];
+                    if (linkValue === null || linkValue === undefined) continue;
+                    
+                    const targetTable = model.getTable(col.targetTable);
+                    if (!targetTable) {
+                        linkErrors++;
+                        html += `<p class="fail">❌ ${table.name}.${col.name}: target table not found (${col.targetTable})</p>`;
+                        continue;
+                    }
+                    
+                    const targetRow = targetTable.getRow(linkValue);
+                    if (!targetRow) {
+                        linkErrors++;
+                        html += `<p class="fail">❌ ${table.name}.${col.name}: row ${linkValue} not found in ${targetTable.name}</p>`;
+                    } else {
+                        html += `<p class="pass">✅ ${table.name}.${col.name} → ${targetTable.name}.${targetRow.name || targetRow._idx}</p>`;
+                    }
+                }
+            }
+        }
+        
+        if (linkErrors === 0 && linkErrors !== undefined) {
+            html += `<p class="pass">✅ All links resolved correctly (${linkErrors} errors)</p>`;
+        } else if (linkErrors > 0) {
+            html += `<p class="fail">❌ ${linkErrors} link errors found</p>`;
+        }
+        html += `</div>`;
+
+        // Show JSON preview
+        html += `<div class="section">`;
+        html += `<h2>📄 JSON Preview (first 1000 chars)</h2>`;
+        html += `<pre>${jsonString.slice(0, 1000)}${jsonString.length > 1000 ? '\n... (truncated)' : ''}</pre>`;
+        html += `</div>`;
+
+        output.innerHTML = html;
+
+        console.log('✅ Test complete');
+        
+        if (!diff.ok) {
+            console.error('❌ Round-trip failed at:', diff.path);
+            console.error('Expected:', diff.expected);
+            console.error('Got:', diff.got);
+        }
+
+        // Export for manual inspection
+        window.__testModel = model;
+        window.__testOriginal = originalSnapshot;
+        window.__testImported = newSnapshot;
+        window.__testDiff = diff;
+
+        console.log('📊 Test data available in window.__testModel, __testOriginal, __testImported');
+    </script>
+</body>
+</html>

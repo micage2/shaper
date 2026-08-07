@@ -1,49 +1,195 @@
-import { generateUUID } from "./uuid.js";
+import { generateUUID } from './uuid.js';
 
 export class Type {
-    constructor(name, properties = [], instances = []) {
-        this.id = generateUUID();
+    constructor(name, columns = [], rows = []) {
+        this.uuid = generateUUID();
         this.name = name;
-        this.properties = properties.map(p => ({
-            ...p,
-            id: p.id || generateUUID()
+
+        this.columns = columns.map(col => ({
+            name: col.name,
+            type: col.type || 'string',
+            targetTable: col.targetTable || null
         }));
-        this.instances = instances.map(row => ({
-            ...row,
-            id: row.id || generateUUID()
-        }));
-    }
 
-    addInstance(rowData) {
-        const newRow = {
-            ...rowData,
-            id: rowData.id || generateUUID()
-        };
-        this.instances.push(newRow);
-        return newRow.id;
-    }
+        this.rows = [];
+        this._nextIdx = 0;
 
-    deleteInstance(rowIndex) {
-        if (rowIndex < 0 || rowIndex >= this.instances.length) return false;
-        this.instances.splice(rowIndex, 1);
-        return true;
-    }
-
-    updateCell(rowIndex, propertyName, newValue) {
-        if (rowIndex < 0 || rowIndex >= this.instances.length) return false;
-        const row = this.instances[rowIndex];
-        if (!(propertyName in row)) return false;
-        const propDef = this.properties.find(p => p.name === propertyName);
-        if (!propDef) return false;
-        try {
-            row[propertyName] = this.coerceValue(newValue, propDef.type, propDef);
-        } catch (_) {
-            return false;
+        for (const row of rows) {
+            this.insertRow(row);
         }
-        return true;
     }
 
-    coerceValue(value, type, propDef = null) {
+    // ----- Row Operations -----
+    insertRow(rowData) {
+        // Validate: all link columns must have a value
+        for (const col of this.columns) {
+            for (const col of this.columns) {
+                if (col.type === 'link') {
+                    const value = rowData[col.name];
+                    if (value === null || value === undefined || value === '') {
+                        console.error(`[Table: "${this.name}"] Cannot insert row: link column "${col.name}" cannot be null or empty`);
+                        return { success: false, error: `Column "${col.name}" cannot be null` };
+                    }
+                }
+            }
+        }
+
+        const idx = this._nextIdx++;
+        const newRow = {
+            _idx: idx,
+            _uuid: generateUUID()
+        };
+        for (const [key, value] of Object.entries(rowData)) {
+            newRow[key] = value;
+        }
+        this.rows.push(newRow);
+        return { success: true, rowIdx: idx };
+    }
+
+    deleteRow(idx) {
+        const index = this.rows.findIndex(row => row._idx === idx);
+        if (index === -1) {
+            console.error(`[Table] Row ${idx} not found in table "${this.name}"`);
+            return { success: false, error: 'Row not found' };
+        }
+        this.rows.splice(index, 1);
+        return { success: true };
+    }
+
+    getRow(idx) {
+        return this.rows.find(row => row._idx === idx) || null;
+    }
+
+    updateCell(rowIdx, columnName, value) {
+        const row = this.getRow(rowIdx);
+        if (!row) {
+            console.error(`[Table] Row ${rowIdx} not found in table "${this.name}"`);
+            return { success: false, error: 'Row not found' };
+        }
+
+        const col = this.getColumn(columnName);
+        if (!col) {
+            console.error(`[Table] Column "${columnName}" not found in table "${this.name}"`);
+            return { success: false, error: 'Column not found' };
+        }
+
+        // Validate: link columns cannot be set to null
+        if (col.type === 'link') {
+            if (value === null || value === undefined || value === '') {
+                console.error(`[Table] Cannot set link column "${columnName}" to null in table "${this.name}"`);
+                return { success: false, error: `Column "${columnName}" cannot be null` };
+            }
+        }
+
+        try {
+            row[columnName] = this.coerceValue(value, col.type);
+            return { success: true };
+        } catch (_) {
+            console.error(`[Table] Failed to coerce value for column "${columnName}" in table "${this.name}"`);
+            return { success: false, error: 'Invalid value' };
+        }
+    }
+
+    // ----- Column Operations -----
+
+    addColumn(columnDef) {
+        if (this.columns.find(col => col.name === columnDef.name)) {
+            console.error(`[Table] Column "${columnDef.name}" already exists in table "${this.name}"`);
+            return { success: false, error: 'Column already exists' };
+        }
+
+        // Link column must have a targetTable
+        if (columnDef.type === 'link' && !columnDef.targetTable) {
+            console.error(`[Table] Link column "${columnDef.name}" in table "${this.name}" has no targetTable`);
+            return { success: false, error: 'Link column must have a targetTable' };
+        }
+
+        // Cannot add link column to table with existing rows (would create orphans)
+        if (columnDef.type === 'link' && this.rows.length > 0) {
+            console.error(`[Table] Cannot add link column "${columnDef.name}" to table "${this.name}" with existing rows`);
+            return { success: false, error: 'Cannot add link column to table with existing rows' };
+        }
+
+        this.columns.push({
+            name: columnDef.name,
+            type: columnDef.type || 'string',
+            targetTable: columnDef.targetTable || null
+        });
+
+        const defaultValue = this.getDefaultForType(columnDef.type || 'string');
+        this.rows.forEach(row => {
+            row[columnDef.name] = defaultValue;
+        });
+        return { success: true };
+    }
+
+    deleteColumn(columnName) {
+        const index = this.columns.findIndex(col => col.name === columnName);
+        if (index === -1) {
+            console.error(`[Table] Column "${columnName}" not found in table "${this.name}"`);
+            return { success: false, error: 'Column not found' };
+        }
+
+        const col = this.columns[index];
+
+        // Check if link column is in use
+        if (col.type === 'link') {
+            for (const row of this.rows) {
+                if (row[col.name] !== null && row[col.name] !== undefined) {
+                    console.error(`[Table] Cannot delete link column "${columnName}" in table "${this.name}": rows have links to other tables`);
+                    return { success: false, error: 'Column is in use' };
+                }
+            }
+        }
+
+        this.columns.splice(index, 1);
+        this.rows.forEach(row => {
+            delete row[columnName];
+        });
+        return { success: true };
+    }
+
+    renameColumn(oldName, newName) {
+        if (this.columns.find(col => col.name === newName)) {
+            console.error(`[Table] Column "${newName}" already exists in table "${this.name}"`);
+            return { success: false, error: 'Column name already exists' };
+        }
+
+        const col = this.getColumn(oldName);
+        if (!col) {
+            console.error(`[Table] Column "${oldName}" not found in table "${this.name}"`);
+            return { success: false, error: 'Column not found' };
+        }
+
+        col.name = newName;
+        this.rows.forEach(row => {
+            if (oldName in row) {
+                row[newName] = row[oldName];
+                delete row[oldName];
+            }
+        });
+        return { success: true };
+    }
+
+    // ----- Getters -----
+
+    getColumn(name) {
+        return this.columns.find(col => col.name === name) || null;
+    }
+
+    getColumnNames() {
+        return this.columns.map(col => col.name);
+    }
+
+    findLinkColumnsReferencing(tableUuid) {
+        return this.columns.filter(col =>
+            col.type === 'link' && col.targetTable === tableUuid
+        );
+    }
+
+    // ----- Value Helpers -----
+
+    coerceValue(value, type) {
         if (value === null || value === undefined || value === '') {
             return this.getDefaultForType(type);
         }
@@ -67,8 +213,8 @@ export class Type {
                 return [String(value)];
             }
             case 'link': {
-                if (!value || value === '') return null;
-                return String(value);
+                if (value === null || value === undefined || value === '') return null;
+                return Number(value);
             }
             default: return value;
         }
@@ -85,67 +231,20 @@ export class Type {
         }
     }
 
-    addColumn(property) {
-        if (this.properties.find(p => p.name === property.name)) {
-            return false;
+    createDefaultRow() {
+        const row = {};
+        for (const col of this.columns) {
+            // Link columns cannot have a default value
+            if (col.type === 'link') {
+                console.error(`[Table] Cannot create default row: table "${this.name}" has link column "${col.name}"`);
+                return { success: false, error: 'Table has link columns, cannot create default row' };
+            }
+            row[col.name] = this.getDefaultForType(col.type);
         }
-        const newProp = {
-            ...property,
-            id: property.id || generateUUID()
-        };
-        this.properties.push(newProp);
-        const defaultValue = this.getDefaultForType(newProp.type);
-        this.instances.forEach(row => {
-            row[newProp.name] = defaultValue;
-        });
-        return true;
-    }
-
-    deleteColumn(propertyName) {
-        const index = this.properties.findIndex(p => p.name === propertyName);
-        if (index === -1) return false;
-        this.properties.splice(index, 1);
-        this.instances.forEach(row => {
-            delete row[propertyName];
-        });
-        return true;
-    }
-
-    deleteColumnById(propertyId) {
-        const index = this.properties.findIndex(p => p.id === propertyId);
-        if (index === -1) return false;
-        const propName = this.properties[index].name;
-        this.properties.splice(index, 1);
-        this.instances.forEach(row => {
-            delete row[propName];
-        });
-        return true;
-    }
-
-    getProperty(name) {
-        return this.properties.find(p => p.name === name);
-    }
-
-    getPropertyNames() {
-        return this.properties.map(p => p.name);
+        return { success: true, row: row };
     }
 
     rowCount() {
-        return this.instances.length;
-    }
-
-    createDefaultRow() {
-        const row = { id: generateUUID() };
-        this.properties.forEach(prop => {
-            row[prop.name] = this.getDefaultForType(prop.type);
-        });
-        return row;
-    }
-
-    findLinkColumnsReferencing(tableId) {
-        return this.properties.filter(p =>
-            p.type === 'link' && p.targetTable === tableId
-        );
+        return this.rows.length;
     }
 }
-

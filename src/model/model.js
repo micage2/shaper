@@ -1,10 +1,10 @@
-// src/model.js
-import { Type } from "./type.js";
+// src/model/model.js
+import { Type } from './type.js';
+import { generateUUID } from './uuid.js';
 
 export class Model {
     constructor() {
         this.tables = {};
-        this.currentTableId = null;
         this.subscribers = [];
     }
 
@@ -16,7 +16,6 @@ export class Model {
     }
 
     notify() {
-        console.log('📢 Model.notify() called, subscribers:', this.subscribers.length);
         this.subscribers.forEach(callback => {
             try {
                 callback();
@@ -26,235 +25,255 @@ export class Model {
         });
     }
 
-    addTable(name, properties = [], instances = []) {
+    // ----- Table Operations -----
+
+    addTable(name, columns = [], rows = []) {
         if (Object.values(this.tables).find(t => t.name === name)) {
             return false;
         }
-        const table = new Type(name, properties, instances);
-        this.tables[table.id] = table;
-        if (!this.currentTableId) {
-            this.currentTableId = table.id;
-        }
+        const hasName = columns.some(col => col.name === 'name');
+        const allColumns = hasName ? columns : [{ name: 'name', type: 'string' }, ...columns];
+
+        const table = new Type(name, allColumns, rows);
+        this.tables[table.uuid] = table;
         this.notify();
-        return table.id;
+        return table.uuid;
     }
 
-    deleteTable(tableId) {
-        if (!this.tables[tableId]) return false;
-        if (Object.keys(this.tables).length === 1) return false;
-
-        const referencingColumns = [];
-        for (const [id, table] of Object.entries(this.tables)) {
-            if (id === tableId) continue;
-            const linkCols = table.findLinkColumnsReferencing(tableId);
-            linkCols.forEach(col => {
-                referencingColumns.push({
-                    tableName: table.name,
-                    columnName: col.name,
-                    columnId: col.id
-                });
-            });
+    renameTable(tableUuid, newName) {
+        const table = this.getTable(tableUuid);
+        if (!table) return { success: false, error: 'Table not found' };
+        if (Object.values(this.tables).some(t => t.name === newName && t.uuid !== tableUuid)) {
+            return { success: false, error: 'Table name already exists' };
         }
-
-        for (const [id, table] of Object.entries(this.tables)) {
-            if (id === tableId) continue;
-            const linkCols = table.findLinkColumnsReferencing(tableId);
-            linkCols.forEach(col => {
-                table.deleteColumnById(col.id);
-            });
-        }
-
-        delete this.tables[tableId];
-
-        if (this.currentTableId === tableId) {
-            const keys = Object.keys(this.tables);
-            this.currentTableId = keys.length > 0 ? keys[0] : null;
-        }
-
+        table.name = newName;
         this.notify();
-        return { success: true, deletedColumns: referencingColumns };
+        return { success: true };
     }
 
-    getCurrentTable() {
-        if (!this.currentTableId || !this.tables[this.currentTableId]) {
-            const keys = Object.keys(this.tables);
-            if (keys.length > 0) {
-                this.currentTableId = keys[0];
-            } else {
-                return null;
-            }
-        }
-        return this.tables[this.currentTableId];
-    }
-
-    getTableNames() {
-        return Object.values(this.tables).map(t => t.name);
-    }
-
-    getTableIdByName(name) {
-        const table = Object.values(this.tables).find(t => t.name === name);
-        return table ? table.id : null;
-    }
-
-    getTableNameById(id) {
-        return this.tables[id] ? this.tables[id].name : null;
-    }
-
-    switchTable(tableId) {
-        if (this.tables[tableId]) {
-            this.currentTableId = tableId;
-            this.notify();
-            return true;
-        }
-        return false;
-    }
-
-    getTable(id) {
-        return this.tables[id];
+    getTable(uuid) {
+        return this.tables[uuid] || null;
     }
 
     getTableByName(name) {
         return Object.values(this.tables).find(t => t.name === name);
     }
 
-    getDisplayNameForInstance(tableId, instanceId) {
-        const table = this.getTable(tableId);
+    getTableNames() {
+        return Object.values(this.tables).map(t => t.name);
+    }
+
+    getTableUuidByName(name) {
+        const table = this.getTableByName(name);
+        return table ? table.uuid : null;
+    }
+
+    getTableNameByUuid(uuid) {
+        const table = this.getTable(uuid);
+        return table ? table.name : null;
+    }
+
+    // ----- Link Resolution -----
+
+    resolveLink(tableUuid, rowIndex) {
+        const table = this.getTable(tableUuid);
         if (!table) return null;
-
-        const instance = table.instances.find(row => row.id === instanceId);
-        if (!instance) return null;
-
-        if (instance.name && typeof instance.name === 'string') {
-            return instance.name;
-        }
-        if (instance.title && typeof instance.title === 'string') {
-            return instance.title;
-        }
-        return instanceId;
+        return table.getRow(rowIndex);
     }
 
-    getDisplayNameForLink(linkValue, targetTableId) {
-        if (!linkValue) return null;
-        return this.getDisplayNameForInstance(targetTableId, linkValue);
+    getDisplayNameForLink(tableUuid, rowIndex) {
+        const row = this.resolveLink(tableUuid, rowIndex);
+        return row ? (row.name || String(rowIndex)) : null;
     }
 
-    // TreeView helper methods
-    getAllInstances() {
+    // ----- Tree Helpers -----
+
+    getAllRows() {
         const all = [];
-        for (const [tableId, table] of Object.entries(this.tables)) {
-            table.instances.forEach(instance => {
+        for (const [tableUuid, table] of Object.entries(this.tables)) {
+            for (const row of table.rows) {
                 all.push({
-                    ...instance,
-                    _tableId: tableId,
+                    ...row,
+                    _tableUuid: tableUuid,
                     _tableName: table.name,
                     _type: table.name
                 });
-            });
+            }
         }
         return all;
     }
 
-    findChildren(instanceId, tableId) {
+    findChildren(tableUuid, rowIdx) {
         const children = [];
-        const table = this.getTable(tableId);
-        if (!table) return children;
-
-        const linkProps = table.properties.filter(p => p.type === 'link');
-        for (const prop of linkProps) {
-            const instance = table.instances.find(inst => inst.id === instanceId);
-            if (!instance) continue;
-
-            const linkValue = instance[prop.name];
-            if (!linkValue) continue;
-
-            const targetTable = this.getTable(prop.targetTable);
-            if (!targetTable) continue;
-
-            const targetInstance = targetTable.instances.find(inst => inst.id === linkValue);
-            if (targetInstance) {
-                children.push({
-                    ...targetInstance,
-                    _tableId: targetTable.id,
-                    _tableName: targetTable.name,
-                    _type: targetTable.name,
-                    _linkProperty: prop.name
-                });
+        for (const [childTableUuid, childTable] of Object.entries(this.tables)) {
+            const linkCols = childTable.columns.filter(col =>
+                col.type === 'link' && col.targetTable === tableUuid
+            );
+            for (const row of childTable.rows) {
+                for (const col of linkCols) {
+                    if (row[col.name] === rowIdx) {
+                        children.push({
+                            ...row,
+                            _tableUuid: childTableUuid,
+                            _tableName: childTable.name,
+                            _type: childTable.name
+                        });
+                        break;
+                    }
+                }
             }
         }
         return children;
     }
 
-    getRootInstances() {
-        const allInstances = this.getAllInstances();
-        const linkedIds = new Set();
+    getRootRows() {
+        const all = this.getAllRows();
+        const hasParent = new Set();
 
-        for (const [tableId, table] of Object.entries(this.tables)) {
-            const linkProps = table.properties.filter(p => p.type === 'link');
-            for (const instance of table.instances) {
-                for (const prop of linkProps) {
-                    const linkValue = instance[prop.name];
-                    if (linkValue) {
-                        linkedIds.add(linkValue);
+        for (const [tableUuid, table] of Object.entries(this.tables)) {
+            const linkCols = table.columns.filter(col => col.type === 'link');
+            for (const row of table.rows) {
+                for (const col of linkCols) {
+                    if (row[col.name] !== null && row[col.name] !== undefined) {
+                        hasParent.add(row._idx);
+                        break;
                     }
                 }
             }
         }
 
-        return allInstances.filter(inst => !linkedIds.has(inst.id));
+        return all.filter(row => !hasParent.has(row._idx));
     }
 
-    getDisplayName(instance) {
-        if (instance.name && typeof instance.name === 'string') {
-            return instance.name;
+    hasChildren(tableUuid, rowIdx) {
+        return this.findChildren(tableUuid, rowIdx).length > 0;
+    }
+
+    // ----- Serialization -----
+
+    toJSON() {
+        const result = { tables: [] };
+
+        for (const [tableUuid, table] of Object.entries(this.tables)) {
+            const remap = {};
+            table.rows.forEach((row, newIdx) => {
+                remap[row._idx] = newIdx;
+            });
+
+            result.tables.push({
+                uuid: table.uuid,
+                name: table.name,
+                columns: table.columns.map(col => ({
+                    name: col.name,
+                    type: col.type,
+                    targetTable: col.type === 'link' ? col.targetTable : undefined
+                })),
+                rows: table.rows.map((row) => {
+                    const { _idx, _uuid, ...userData } = row;
+                    const remappedRow = {};
+                    for (const [key, value] of Object.entries(userData)) {
+                        const col = table.getColumn(key);
+                        if (col && col.type === 'link' && value !== null && value !== undefined) {
+                            remappedRow[key] = remap[value] !== undefined ? remap[value] : null;
+                        } else {
+                            remappedRow[key] = value;
+                        }
+                    }
+                    return remappedRow;
+                })
+            });
         }
-        if (instance.title && typeof instance.title === 'string') {
-            return instance.title;
+
+        return result;
+    }
+
+    fromJSON(obj) {
+        try {
+            const data = typeof obj === 'string' ? JSON.parse(obj) : obj;
+            if (!data.tables) {
+                return { success: false, error: 'Invalid format: missing "tables" array' };
+            }
+
+            this.tables = {};
+
+            // First pass: create tables
+            const tableUuidMap = {};
+            for (const tableDef of data.tables) {
+                const uuid = tableDef.uuid || generateUUID();
+                const hasName = (tableDef.columns || []).some(col => col.name === 'name');
+                const columns = hasName ? tableDef.columns : [{ name: 'name', type: 'string' }, ...(tableDef.columns || [])];
+
+                const table = new Type(tableDef.name, columns, []);
+                table.uuid = uuid;
+                this.tables[uuid] = table;
+                tableUuidMap[tableDef.name] = uuid;
+            }
+
+            // Resolve link targets
+            for (const [tableName, tableUuid] of Object.entries(tableUuidMap)) {
+                const table = this.getTable(tableUuid);
+                for (const col of table.columns) {
+                    if (col.type === 'link' && col.targetTable) {
+                        if (!this.tables[col.targetTable]) {
+                            console.warn(`[Import] Target table UUID "${col.targetTable}" not found`);
+                            col.targetTable = null;
+                        }
+                    }
+                }
+            }
+
+            // Second pass: insert rows
+            for (const tableDef of data.tables) {
+                const tableUuid = tableDef.uuid || tableUuidMap[tableDef.name];
+                const table = this.getTable(tableUuid);
+                if (!table) continue;
+
+                for (const rowData of (tableDef.rows || [])) {
+                    const data = { ...rowData };
+                    if (!data.name) data.name = 'Unnamed';
+                    const result = table.insertRow(data);
+                    if (!result.success) {
+                        console.warn(`[Import] Failed to insert row:`, result.error);
+                    }
+                }
+            }
+
+            // Third pass: validate links
+            for (const [tableName, tableUuid] of Object.entries(tableUuidMap)) {
+                const table = this.getTable(tableUuid);
+                for (const row of table.rows) {
+                    for (const col of table.columns) {
+                        if (col.type === 'link' && row[col.name] !== null && row[col.name] !== undefined) {
+                            const targetTable = this.getTable(col.targetTable);
+                            if (targetTable) {
+                                const targetRow = targetTable.getRow(row[col.name]);
+                                if (!targetRow) {
+                                    console.warn(`[Import] Invalid link: row ${row[col.name]} not found`);
+                                    row[col.name] = null;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            this.notify();
+
+            return {
+                success: true,
+                tableCount: Object.keys(this.tables).length,
+                rowCount: Object.values(this.tables).reduce((sum, t) => sum + t.rows.length, 0)
+            };
+
+        } catch (e) {
+            console.error('[Import] Error:', e);
+            return { success: false, error: e.message };
         }
-        return instance.id;
     }
 
-    addInstanceToCurrentTable(rowData) {
-        const table = this.getCurrentTable();
-        if (!table) return false;
-        const result = table.addInstance(rowData);
-        this.notify();
-        return result;
-    }
-
-    addColumnToCurrentTable(property) {
-        const table = this.getCurrentTable();
-        if (!table) return false;
-        const result = table.addColumn(property);
-        this.notify();
-        return result;
-    }
-
-    deleteInstanceFromCurrentTable(rowIndex) {
-        const table = this.getCurrentTable();
-        if (!table) return false;
-        const result = table.deleteInstance(rowIndex);
-        this.notify();
-        return result;
-    }
-
-    deleteColumnFromCurrentTable(propertyName) {
-        const table = this.getCurrentTable();
-        if (!table) return false;
-        const result = table.deleteColumn(propertyName);
-        this.notify();
-        return result;
-    }
-
-    updateCellInCurrentTable(rowIndex, propertyName, value) {
-        const table = this.getCurrentTable();
-        if (!table) return false;
-        const result = table.updateCell(rowIndex, propertyName, value);
-        this.notify();
-        return result;
-    }
+    // ----- Command System -----
 
     execute(command) {
-        // Validate command
         if (!command || typeof command !== 'object' || !command.type) {
             return { success: false, error: 'Invalid command' };
         }
@@ -264,20 +283,26 @@ export class Model {
             case 'UPDATE_CELL':
                 result = this._handleUpdateCell(command);
                 break;
-            case 'ADD_INSTANCE':
-                result = this._handleAddInstance(command);
+            case 'ADD_ROW':
+                result = this._handleAddRow(command);
                 break;
-            case 'DELETE_INSTANCE':
-                result = this._handleDeleteInstance(command);
+            case 'DELETE_ROW':
+                result = this._handleDeleteRow(command);
+                break;
+            case 'ADD_TABLE':
+                result = this._handleAddTable(command);
+                break;
+            case 'DELETE_TABLE':
+                result = this._handleDeleteTable(command);
+                break;
+            case 'RENAME_TABLE':
+                result = this._handleRenameTable(command);
                 break;
             case 'ADD_COLUMN':
                 result = this._handleAddColumn(command);
                 break;
             case 'DELETE_COLUMN':
                 result = this._handleDeleteColumn(command);
-                break;
-            case 'RENAME_INSTANCE':
-                result = this._handleRenameInstance(command);
                 break;
             case 'RENAME_COLUMN':
                 result = this._handleRenameColumn(command);
@@ -286,136 +311,183 @@ export class Model {
                 return { success: false, error: `Unknown command: ${command.type}` };
         }
 
-        if (result.success) {
+        if (result && result.success) {
             this.notify();
         }
-        return result;
+        return result || { success: false, error: 'Command failed' };
     }
 
     // ----- Command Handlers -----
+
     _handleUpdateCell(command) {
-        const { tableId, instanceId, property, value } = command;
-        const table = this.getTable(tableId);
+        const { tableUuid, rowIdx, columnName, value } = command;
+        const table = this.getTable(tableUuid);
         if (!table) return { success: false, error: 'Table not found' };
 
-        const propDef = table.getProperty(property);
-        if (!propDef) return { success: false, error: 'Property not found' };
+        const col = table.getColumn(columnName);
+        if (!col) return { success: false, error: 'Column not found' };
 
-        const index = table.instances.findIndex(inst => inst.id === instanceId);
-        if (index === -1) return { success: false, error: 'Instance not found' };
+        if (col.type === 'link' && (value === null || value === undefined || value === '')) {
+            return { success: false, error: `Column "${columnName}" cannot be null` };
+        }
 
-        try {
-            const coerced = table.coerceValue(value, propDef.type, propDef);
+        const result = table.updateCell(rowIdx, columnName, value);
+        if (!result.success) return result;
+        return { success: true };
+    }
 
-            // Link validation
-            if (propDef.type === 'link' && coerced) {
-                const targetTable = this.getTable(propDef.targetTable);
-                if (targetTable) {
-                    const exists = targetTable.instances.some(inst => inst.id === coerced);
-                    if (!exists) {
-                        return { success: false, error: 'Linked instance not found' };
+    _handleAddRow(command) {
+        const { tableUuid, data = {} } = command;
+        const table = this.getTable(tableUuid);
+        if (!table) return { success: false, error: 'Table not found' };
+
+        // Check if all link columns have valid targets
+        for (const col of table.columns) {
+            if (col.type === 'link') {
+                const targetTable = this.getTable(col.targetTable);
+                if (!targetTable || targetTable.rows.length === 0) {
+                    console.error(`[Model] Cannot add row: target table "${col.targetTable}" has no rows`);
+                    return { success: false, error: `Column "${col.name}" has no valid target` };
+                }
+            }
+        }
+
+        // Build row data with defaults
+        const rowData = { ...data };
+        for (const col of table.columns) {
+            if (col.type === 'link' && rowData[col.name] === undefined) {
+                const targetTable = this.getTable(col.targetTable);
+                rowData[col.name] = targetTable.rows[0]._idx;
+            } else if (rowData[col.name] === undefined) {
+                if (col.type === 'string') rowData[col.name] = '';
+                else if (col.type === 'number') rowData[col.name] = 0;
+                else if (col.type === 'boolean') rowData[col.name] = true;
+                else if (col.type === 'array') rowData[col.name] = [];
+            }
+        }
+
+        // Ensure name exists
+        if (!rowData.name) {
+            rowData.name = `no_name_${table.rows.length}`;
+        }
+
+        const result = table.insertRow(rowData);
+        if (!result.success) return result;
+        return { success: true, rowIdx: result.rowIdx };
+    }
+
+    _handleDeleteRow(command) {
+        const { tableUuid, rowIdx } = command;
+        const table = this.getTable(tableUuid);
+        if (!table) return { success: false, error: 'Table not found' };
+
+        // Cascade delete: find and delete all children
+        const children = this.findChildren(tableUuid, rowIdx);
+        if (children.length > 0) {
+            console.warn(`[Model] Deleting parent row #${rowIdx} — ${children.length} children will be deleted`);
+            for (const child of children) {
+                const childTable = this.getTable(child._tableUuid);
+                if (childTable) {
+                    const result = childTable.deleteRow(child._idx);
+                    if (!result.success) {
+                        console.warn(`[Model] Failed to delete child row ${child._idx}:`, result.error);
                     }
                 }
             }
-
-            table.instances[index][property] = coerced;
-            return { success: true };
-        } catch (e) {
-            return { success: false, error: e.message };
         }
+
+        const result = table.deleteRow(rowIdx);
+        if (!result.success) return result;
+        return { success: true };
     }
 
-    _handleAddInstance(command) {
-        const { tableId, data = {} } = command;
-        const table = this.getTable(tableId);
-        if (!table) return { success: false, error: 'Table not found' };
+    _handleAddTable(command) {
+        const { name, columns = [], rows = [] } = command;
+        if (Object.values(this.tables).find(t => t.name === name)) {
+            return { success: false, error: `Table "${name}" already exists` };
+        }
 
-        const row = table.createDefaultRow();
-        for (const [key, value] of Object.entries(data)) {
-            const propDef = table.getProperty(key);
-            if (propDef) {
-                row[key] = table.coerceValue(value, propDef.type, propDef);
+        const uuid = this.addTable(name, columns, rows);
+        if (!uuid) return { success: false, error: 'Failed to add table' };
+        return { success: true, tableUuid: uuid };
+    }
+
+    _handleDeleteTable(command) {
+        const { tableUuid } = command;
+        const table = this.getTable(tableUuid);
+        if (!table) return { success: false, error: 'Table not found' };
+        if (Object.keys(this.tables).length === 1) {
+            return { success: false, error: 'Cannot delete the last table' };
+        }
+
+        // Find all child tables that link to this table
+        const childTables = [];
+        for (const [id, t] of Object.entries(this.tables)) {
+            if (id === tableUuid) continue;
+            const linkCols = t.findLinkColumnsReferencing(tableUuid);
+            if (linkCols.length > 0) {
+                childTables.push(t);
             }
         }
 
-        const id = table.addInstance(row);
-        return { success: true, instanceId: id };
+        // Cascade delete: delete all rows in child tables
+        for (const childTable of childTables) {
+            while (childTable.rows.length > 0) {
+                const row = childTable.rows[0];
+                const result = this._handleDeleteRow({
+                    tableUuid: childTable.uuid,
+                    rowIdx: row._idx
+                });
+                if (!result.success) {
+                    console.warn(`[Model] Failed to delete child row ${row._idx}:`, result.error);
+                }
+            }
+        }
+
+        // Delete the table
+        delete this.tables[tableUuid];
+        return { success: true };
     }
 
-    _handleDeleteInstance(command) {
-        const { tableId, instanceId } = command;
-        const table = this.getTable(tableId);
-        if (!table) return { success: false, error: 'Table not found' };
-
-        const index = table.instances.findIndex(inst => inst.id === instanceId);
-        if (index === -1) return { success: false, error: 'Instance not found' };
-
-        table.deleteInstance(index);
+    _handleRenameTable(command) {
+        const { tableUuid, newName } = command;
+        const result = this.renameTable(tableUuid, newName);
+        if (!result.success) return result;
         return { success: true };
     }
 
     _handleAddColumn(command) {
-        const { tableId, property } = command;
-        const table = this.getTable(tableId);
+        const { tableUuid, column } = command;
+        const table = this.getTable(tableUuid);
         if (!table) return { success: false, error: 'Table not found' };
 
-        const result = table.addColumn(property);
-        if (!result) return { success: false, error: 'Column already exists' };
+        if (column.type === 'link' && column.targetTable) {
+            const targetTable = this.getTable(column.targetTable);
+            if (!targetTable) return { success: false, error: 'Target table not found' };
+        }
+
+        const result = table.addColumn(column);
+        if (!result.success) return result;
         return { success: true };
     }
 
     _handleDeleteColumn(command) {
-        const { tableId, propertyName } = command;
-        const table = this.getTable(tableId);
+        const { tableUuid, columnName } = command;
+        const table = this.getTable(tableUuid);
         if (!table) return { success: false, error: 'Table not found' };
 
-        const result = table.deleteColumn(propertyName);
-        if (!result) return { success: false, error: 'Column not found' };
-        return { success: true };
-    }
-
-    _handleRenameInstance(command) {
-        const { tableId, instanceId, newName, property = 'name' } = command;
-        const table = this.getTable(tableId);
-        if (!table) return { success: false, error: 'Table not found' };
-
-        const propDef = table.getProperty(property);
-        if (!propDef) return { success: false, error: `Property "${property}" not found` };
-        if (propDef.type !== 'string') {
-            return { success: false, error: `Property "${property}" is not a string` };
-        }
-
-        const index = table.instances.findIndex(inst => inst.id === instanceId);
-        if (index === -1) return { success: false, error: 'Instance not found' };
-
-        table.instances[index][property] = String(newName);
+        const result = table.deleteColumn(columnName);
+        if (!result.success) return result;
         return { success: true };
     }
 
     _handleRenameColumn(command) {
-        const { tableId, oldName, newName } = command;
-        const table = this.getTable(tableId);
+        const { tableUuid, oldName, newName } = command;
+        const table = this.getTable(tableUuid);
         if (!table) return { success: false, error: 'Table not found' };
-        
-        const propDef = table.getProperty(oldName);
-        if (!propDef) return { success: false, error: 'Column not found' };
-        
-        // Check if new name already exists (excluding this column)
-        if (table.properties.some(p => p.name === newName && p.name !== oldName)) {
-            return { success: false, error: 'Column name already exists' };
-        }
-        
-        // Update the property name
-        propDef.name = newName;
-        
-        // CRITICAL: Update all instances - rename the key in every row
-        for (const instance of table.instances) {
-            if (oldName in instance) {
-                instance[newName] = instance[oldName];
-                delete instance[oldName];
-            }
-        }
-        
+
+        const result = table.renameColumn(oldName, newName);
+        if (!result.success) return result;
         return { success: true };
-    }    
-} // end class Model
+    }
+}

@@ -1,0 +1,77 @@
+{
+    "tables": [
+        {
+            "name": "City",
+            "columns": [
+                { "name": "name", "type": "string" },
+                { "name": "population", "type": "number" }
+            ],
+            "rows": [
+                { "name": "Dragonhold", "population": 12000 },
+                { "name": "Baldur's Gate", "population": 42000 },
+                { "name": "Neverwinter", "population": 23000 }
+            ]
+        },
+        {
+            "name": "Building",
+            "columns": [
+                { "name": "name", "type": "string" },
+                { "name": "city", "type": "link", "targetTable": "City" },
+                { "name": "type", "type": "string" }
+            ],
+            "rows": [
+                { "name": "Talon's Residence", "city": 0, "type": "house" },
+                { "name": "The Rusty Dagger Inn", "city": 0, "type": "inn" },
+                { "name": "Temple of the Old Gods", "city": 0, "type": "temple" },
+                { "name": "Sorcerous Sundries", "city": 1, "type": "shop" },
+                { "name": "The Elfsong Tavern", "city": 1, "type": "tavern" }
+            ]
+        },
+        {
+            "name": "Character",
+            "columns": [
+                { "name": "name", "type": "string" },
+                { "name": "building", "type": "link", "targetTable": "Building" },
+                { "name": "level", "type": "number" }
+            ],
+            "rows": [
+                { "name": "Talon", "building": 0, "level": 5 },
+                { "name": "Greta", "building": 1, "level": 4 },
+                { "name": "Ulric", "building": 2, "level": 6 },
+                { "name": "Eldric", "building": 3, "level": 3 },
+                { "name": "Silas", "building": 4, "level": 2 }
+            ]
+        },
+        {
+            "name": "Weapon",
+            "columns": [
+                { "name": "name", "type": "string" },
+                { "name": "damage", "type": "number" },
+                { "name": "owner", "type": "link", "targetTable": "Character" }
+            ],
+            "rows": [
+                { "name": "Talon's Bow", "damage": 12, "owner": 0 },
+                { "name": "Greta's Axe", "damage": 18, "owner": 1 },
+                { "name": "Ulric's Staff", "damage": 8, "owner": 2 },
+                { "name": "Eldric's Dagger", "damage": 6, "owner": 3 },
+                { "name": "Silas's Shortsword", "damage": 10, "owner": 4 },
+                { "name": "Dagger", "damage": 4, "owner": null }
+            ]
+        },
+        {
+            "name": "Armor",
+            "columns": [
+                { "name": "name", "type": "string" },
+                { "name": "protection", "type": "number" },
+                { "name": "owner", "type": "link", "targetTable": "Character" }
+            ],
+            "rows": [
+                { "name": "Hunter's Robe", "protection": 5, "owner": 0 },
+                { "name": "Chainmail", "protection": 8, "owner": 1 },
+                { "name": "Cloak of Shadows", "protection": 6, "owner": 2 },
+                { "name": "Mage Robe", "protection": 4, "owner": 3 },
+                { "name": "Leather Armor", "protection": 7, "owner": 4 }
+            ]
+        }
+    ]
+}

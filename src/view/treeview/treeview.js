@@ -21,7 +21,7 @@ export class TreeView {
         this.render();
     }
 
-    render() {
+    __render() {
         const roots = this.model.getRootInstances();
 
         this.container.innerHTML = '';
@@ -112,7 +112,7 @@ export class TreeView {
         this.container.appendChild(toolbar);
     }
 
-    createTreeNode(instance, depth = 0) {
+    __createTreeNode(instance, depth = 0) {
         const div = document.createElement('div');
         div.className = 'tree-node';
         div.style.paddingLeft = `${depth * 20}px`;
@@ -259,10 +259,10 @@ export class TreeView {
         // Update state
         this.selectedInstanceId = instanceId;
         this.selectedTableId = tableId;
-        
+
         // Update DOM directly - NO RENDER
         this.updateSelectionInDOM(instanceId);
-        
+
         // Notify PropertyView
         if (this.onSelect) {
             this.onSelect(instanceId, tableId);
@@ -273,7 +273,7 @@ export class TreeView {
         // Remove all selections
         this.container.querySelectorAll('.tree-node-content.selected')
             .forEach(el => el.classList.remove('selected'));
-        
+
         // Add selection to new node
         if (selectedId) {
             const node = this.container.querySelector(`[data-instance-id="${selectedId}"]`);
@@ -282,8 +282,8 @@ export class TreeView {
                 if (content) content.classList.add('selected');
             }
         }
-    }   
-    
+    }
+
     toggleExpand(instanceId) {
         if (this.expandedIds.has(instanceId)) {
             this.expandedIds.delete(instanceId);
@@ -389,21 +389,21 @@ export class TreeView {
 
     startEditing(instance, labelElement) {
         if (this.editingNode) return;
-        
+
         const currentName = this.model.getDisplayName(instance);
         const table = this.model.getTable(instance._tableId);
         if (!table) return;
-        
+
         const propDef = table.getProperty('name') || table.getProperty('title');
         if (!propDef) {
-            alert('This instance has no "name" or "title" property to edit.');
+            console.error('This instance has no "name" or "title" property to edit.');
             return;
         }
-        
+
         // Get the parent container (the tree-node-content)
         const content = labelElement.closest('.tree-node-content');
         if (!content) return;
-        
+
         // Create input
         const input = document.createElement('input');
         input.type = 'text';
@@ -412,14 +412,14 @@ export class TreeView {
         input.dataset.instanceId = instance.id;
         input.dataset.tableId = instance._tableId;
         input.dataset.propName = propDef.name;
-        
+
         // Hide label, insert input next to it
         labelElement.style.display = 'none';
         content.insertBefore(input, labelElement);
-        
+
         input.focus();
         input.select();
-        
+
         this.editingNode = {
             instanceId: instance.id,
             tableId: instance._tableId,
@@ -428,12 +428,12 @@ export class TreeView {
             labelElement: labelElement,
             originalValue: currentName
         };
-        
+
         // Event listeners
         input.addEventListener('blur', () => {
             this.finishEditing(false);
         });
-        
+
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -444,12 +444,12 @@ export class TreeView {
             }
         });
     }
-    
+
     finishEditing(cancel = false) {
         if (!this.editingNode) return;
-        
+
         const { instanceId, tableId, propName, inputElement, labelElement, originalValue } = this.editingNode;
-        
+
         let newValue = originalValue;
         if (!cancel) {
             const value = inputElement.value.trim();
@@ -465,18 +465,18 @@ export class TreeView {
                     newValue = value;
                     labelElement.textContent = value;
                 } else {
-                    alert(`Failed to rename: ${result.error}`);
+                    console.error(`Failed to rename: ${result.error}`);
                 }
             }
         }
-        
+
         // Remove input, show label
         inputElement.remove();
         labelElement.style.display = '';
-        
+
         this.editingNode = null;
     }
-        
+
     // ----- Toolbar Actions -----
     handleTypeChange(e) {
         // Just update the selection info
@@ -496,7 +496,7 @@ export class TreeView {
         const tableId = typeSelect ? typeSelect.value : null;
 
         if (!tableId) {
-            alert('Please select a type from the dropdown.');
+            console.error('Please select a type from the dropdown.');
             return;
         }
 
@@ -521,13 +521,13 @@ export class TreeView {
                 }
             }
         } else {
-            alert(`Failed to add: ${result.error}`);
+            console.error(`Failed to add: ${result.error}`);
         }
     }
 
     handleDeleteNode() {
         if (!this.selectedInstanceId || !this.selectedTableId) {
-            alert('Please select a node to delete.');
+            console.error('Please select a node to delete.');
             return;
         }
 
@@ -559,9 +559,106 @@ export class TreeView {
                 this.selectedTableId = null;
                 this.render();
             } else {
-                alert(`Failed to delete: ${result.error}`);
+                console.error(`Failed to delete: ${result.error}`);
             }
         }
+    }
+
+
+    render() {
+        const roots = this.model.getRootInstances();
+
+        this.container.innerHTML = '';
+        this.renderToolbar();
+
+        if (roots.length === 0) {
+            // Show empty state
+            return;
+        }
+
+        const treeContainer = document.createElement('div');
+        treeContainer.className = 'tree-container';
+
+        for (const root of roots) {
+            const node = this.createTreeNode(root);
+            treeContainer.appendChild(node);
+        }
+
+        this.container.appendChild(treeContainer);
+    }
+
+    createTreeNode(instance, depth = 0) {
+        const div = document.createElement('div');
+        div.className = 'tree-node';
+        div.style.paddingLeft = `${depth * 20}px`;
+        div.dataset.instanceId = instance.uuid;
+        div.dataset.tableId = instance._tableId;
+
+        const content = document.createElement('div');
+        content.className = 'tree-node-content';
+
+        // Check children
+        const children = this.model.findChildren(instance.uuid);
+        const hasChildren = children.length > 0;
+
+        // Toggle
+        const toggle = document.createElement('span');
+        toggle.className = 'tree-toggle';
+        if (hasChildren) {
+            const isExpanded = this.expandedIds.has(instance.uuid);
+            toggle.textContent = isExpanded ? '▼' : '▶';
+            toggle.style.cursor = 'pointer';
+            toggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleExpand(instance.uuid);
+            });
+        } else {
+            toggle.textContent = ' ';
+        }
+        content.appendChild(toggle);
+
+        // Label
+        const label = document.createElement('span');
+        label.className = 'tree-label';
+        label.textContent = this.model.getDisplayName(instance);
+
+        // Type badge
+        const typeBadge = document.createElement('span');
+        typeBadge.className = 'tree-type-badge';
+        typeBadge.textContent = `[${instance._type || 'unknown'}]`;
+
+        content.appendChild(label);
+        content.appendChild(typeBadge);
+
+        // Selection
+        if (this.selectedInstanceId === instance.uuid) {
+            content.classList.add('selected');
+        }
+
+        content.addEventListener('click', () => {
+            this.selectInstance(instance.uuid, instance._tableId);
+        });
+
+        // Double-click to edit name
+        label.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            this.startEditing(instance, label);
+        });
+
+        div.appendChild(content);
+
+        // Children
+        if (hasChildren && this.expandedIds.has(instance.uuid)) {
+            const childrenContainer = document.createElement('div');
+            childrenContainer.className = 'tree-children';
+            for (const child of children) {
+                const childNode = this.createTreeNode(child, depth + 1);
+                childrenContainer.appendChild(childNode);
+            }
+            div.appendChild(childrenContainer);
+        }
+
+        return div;
     }
 
     // ----- Cleanup -----

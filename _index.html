@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shaper</title>
+  
+  <!-- App styles -->
+  <link rel="stylesheet" href="src/view/app-view.css">
+  
+  <!-- Component styles -->
+  <link rel="stylesheet" href="src/view/tableview/tableview.css">
+  <link rel="stylesheet" href="src/view/treeview/treeview.css">
+  <link rel="stylesheet" href="src/view/treeview/propertyview.css">
+</head>
+<body>
+  <div id="app">
+
+    <div class="toolbar toolbar-app">
+        <div class="toolbar-left">
+            <span class="app-title">📊 Shaper</span>
+        </div>
+        <div class="toolbar-middle">
+            <div class="view-toggle">
+                <button class="view-tab active" data-view="tree">Tree</button>
+                <button class="view-tab" data-view="table">Table</button>
+            </div>
+        </div>
+        <div class="toolbar-right">
+            <button class="btn btn-secondary btn-sm" id="exportBtn">Export</button>
+            <button class="btn btn-secondary btn-sm" id="importBtn">Import</button>
+        </div>
+    </div>
+
+    <div id="split-view">
+        <!-- Combined Tree+Property View -->
+        <div id="tree-property-container">
+            <div id="tree-view-container"></div>
+            <div id="property-view-container"></div>
+        </div>
+        
+        <!-- Table View -->
+        <div id="table-view-container"></div>
+    </div>
+</div>
+  
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

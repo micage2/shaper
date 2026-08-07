@@ -1,56 +1,48 @@
-/* src/app.css */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
-body {
-    font-family: system-ui, -apple-system, sans-serif;
-    background: #f0f2f6;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-#app {
-    width: 1200px;
-    max-width: 98vw;
-    height: 700px;
-    max-height: 98vh;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    border: 1px solid #e6edf4;
-}
-
-#titlebar {
+/* ----- Toolbar System ----- */
+.toolbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 10px 20px;
+    padding: 6px 16px;
+    gap: 8px;
     border-bottom: 1px solid #eef2f7;
     background: #fafcff;
     flex-shrink: 0;
+    flex-wrap: wrap;
+    min-height: 44px;
 }
 
-#titlebar h1 {
+.toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: auto;
+}
+
+.toolbar-middle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+/* App Title */
+.app-title {
     font-size: 18px;
     font-weight: 600;
     color: #1c2f44;
+    white-space: nowrap;
 }
 
-#titlebar .controls {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.view-tabs {
+/* View Toggle */
+.view-toggle {
     display: flex;
     gap: 4px;
     background: #eef3f9;
@@ -73,11 +65,129 @@ body {
 .view-tab.active {
     background: white;
     color: #1c2f44;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .view-tab:hover:not(.active) {
     color: #1c2f44;
+}
+
+/* ----- Table Toolbar Specific ----- */
+.toolbar-table .btn {
+    padding: 4px 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.toolbar-table .btn-sm {
+    padding: 3px 8px;
+    font-size: 11px;
+}
+
+.toolbar-table .btn-success {
+    background: #16a34a;
+    color: white;
+}
+.toolbar-table .btn-success:hover {
+    background: #15803d;
+}
+
+.toolbar-table .btn-primary {
+    background: #2563eb;
+    color: white;
+}
+.toolbar-table .btn-primary:hover {
+    background: #1d4ed8;
+}
+
+.toolbar-table .btn-danger {
+    background: #dc2626;
+    color: white;
+}
+.toolbar-table .btn-danger:hover {
+    background: #b91c1c;
+}
+
+.toolbar-table .btn-rename {
+    background: transparent;
+    color: #94a3b8;
+    padding: 2px 6px;
+    font-size: 14px;
+}
+.toolbar-table .btn-rename:hover {
+    background: #eef3f9;
+    color: #1c2f44;
+}
+
+.toolbar-table .table-selector {
+    padding: 4px 10px;
+    border: 1px solid #dce5ef;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    background: white;
+    cursor: pointer;
+    outline: none;
+    min-width: 100px;
+}
+
+.toolbar-table .table-selector:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Table name editor */
+.toolbar-table .table-name-editor {
+    padding: 4px 10px;
+    border: 2px solid #2563eb;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    outline: none;
+    background: white;
+    min-width: 100px;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Column input group */
+.toolbar-table .col-name-input {
+    padding: 3px 8px;
+    border: 1px solid #dce5ef;
+    border-radius: 4px;
+    font-size: 12px;
+    outline: none;
+    width: 80px;
+}
+
+.toolbar-table .col-name-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.toolbar-table .col-type-select,
+.toolbar-table .col-target-select {
+    padding: 3px 8px;
+    border: 1px solid #dce5ef;
+    border-radius: 4px;
+    font-size: 12px;
+    outline: none;
+    background: white;
+    width: 80px;
+}
+
+.toolbar-table .col-type-select:focus,
+.toolbar-table .col-target-select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.toolbar-table .col-target-select {
+    display: none;
 }
 
 #split-view {
@@ -89,6 +199,7 @@ body {
 #tree-view-container {
     width: 40%;
     min-width: 250px;
+    max-width: 50%;
     overflow: auto;
     border-right: 1px solid #eef2f7;
     flex-shrink: 0;
@@ -99,71 +210,44 @@ body {
 #property-view-container {
     flex: 1;
     overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+#split-view {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Combined view - takes full width when visible */
+#tree-property-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+#tree-view-container {
+    width: 40%;
+    min-width: 250px;
+    max-width: 50%;
+    overflow: auto;
+    border-right: 1px solid #eef2f7;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+#property-view-container {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
 }
 
 #table-view-container {
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
     display: none;
 }
 
-.btn {
-    padding: 4px 14px;
-    border: none;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-
-.btn-secondary {
-    background: #eef3f9;
-    color: #1c2f44;
-}
-
-.btn-secondary:hover {
-    background: #dce5ef;
-}
-
-/* Move view tabs to center */
-#titlebar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 20px;
-    border-bottom: 1px solid #eef2f7;
-    background: #fafcff;
-    flex-shrink: 0;
-}
-
-#titlebar h1 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1c2f44;
-    flex: 0 0 auto;
-}
-
-#titlebar .controls {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex: 1;
-}
-
-.view-tabs {
-    display: flex;
-    gap: 4px;
-    background: #eef3f9;
-    border-radius: 8px;
-    padding: 3px;
-    margin: 0 auto;  /* ← This centers it */
-}
-
-/* Right side controls (Export/Import) should be on the right */
-#titlebar .controls-right {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-left: auto;  /* ← Pushes to the right */
-}

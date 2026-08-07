@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PropertyView Test</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        body {
+            background: #f0f2f6;
+            padding: 20px;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            background: white;
+            border-radius: 8px 8px 0 0;
+            border-bottom: 1px solid #eef2f7;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+
+        .toolbar select,
+        .toolbar input {
+            padding: 6px 12px;
+            border: 1px solid #dce5ef;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+            background: white;
+        }
+
+        .toolbar select:focus,
+        .toolbar input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .toolbar .btn {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .toolbar .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+        .toolbar .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .toolbar .btn-success {
+            background: #16a34a;
+            color: white;
+        }
+        .toolbar .btn-success:hover {
+            background: #15803d;
+        }
+
+        .toolbar .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+        .toolbar .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .toolbar .badge {
+            font-size: 12px;
+            color: #6a7f9b;
+            background: #eef3f9;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .toolbar .spacer {
+            flex: 1;
+        }
+
+        /* Split View */
+        #split-view {
+            display: flex;
+            flex: 1;
+            gap: 0;
+            background: white;
+            border-radius: 0 0 8px 8px;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        #property-view-container {
+            flex: 1;
+            overflow: auto;
+            padding: 16px 20px;
+            background: white;
+        }
+
+        /* PropertyView Styles */
+        .property-empty {
+            padding: 60px 20px;
+            text-align: center;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .property-container {
+            font-size: 14px;
+        }
+
+        .property-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #eef2f7;
+            margin-bottom: 16px;
+        }
+
+        .property-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1c2f44;
+        }
+
+        .property-type {
+            font-size: 13px;
+            color: #6a7f9b;
+            background: #eef3f9;
+            padding: 2px 12px;
+            border-radius: 12px;
+        }
+
+        .property-idx {
+            font-size: 12px;
+            color: #94a3b8;
+            background: #f0f2f6;
+            padding: 2px 10px;
+            border-radius: 12px;
+        }
+
+        .property-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .property-item {
+            display: flex;
+            align-items: baseline;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: background 0.15s;
+        }
+
+        .property-item:hover {
+            background: #f8faff;
+        }
+
+        .property-label {
+            width: 140px;
+            flex-shrink: 0;
+            font-weight: 500;
+            color: #4a5f7a;
+            font-size: 13px;
+        }
+
+        .property-value {
+            flex: 1;
+            color: #1c2f44;
+            font-size: 13px;
+            word-break: break-all;
+            cursor: text;
+            padding: 2px 4px;
+            border-radius: 4px;
+            min-height: 24px;
+        }
+
+        .property-value:hover {
+            background: #f0f4f9;
+        }
+
+        .property-link {
+            color: #2563eb;
+            text-decoration: none;
+            cursor: pointer;
+            border-bottom: 1px dashed #2563eb;
+        }
+
+        .property-link:hover {
+            color: #1d4ed8;
+            border-bottom-color: #1d4ed8;
+        }
+
+        .property-editor {
+            font: inherit;
+            font-size: 13px;
+            padding: 2px 6px;
+            border: 2px solid #2563eb;
+            border-radius: 4px;
+            outline: none;
+            background: white;
+            width: 100%;
+            min-width: 100px;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .property-editor select {
+            appearance: auto;
+            width: 100%;
+            padding: 2px 4px;
+        }
+
+        /* Console output */
+        #console {
+            background: #1a1a2e;
+            color: #e0e0e0;
+            padding: 8px 16px;
+            font-family: monospace;
+            font-size: 12px;
+            border-radius: 4px;
+            margin-top: 8px;
+            max-height: 120px;
+            overflow: auto;
+            flex-shrink: 0;
+        }
+
+        #console .success {
+            color: #4ade80;
+        }
+        #console .error {
+            color: #f87171;
+        }
+        #console .info {
+            color: #60a5fa;
+        }
+
+        /* JSON Preview */
+        #json-preview {
+            background: #f8faff;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: monospace;
+            overflow: auto;
+            max-height: 150px;
+            flex-shrink: 0;
+            border: 1px solid #eef2f7;
+            margin-top: 8px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .status-pass {
+            color: #16a34a;
+            font-weight: bold;
+        }
+        .status-fail {
+            color: #dc2626;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="toolbar">
+            <label>Table:</label>
+            <select id="tableSelector"></select>
+
+            <label>Row:</label>
+            <select id="rowSelector"></select>
+
+            <span class="spacer"></span>
+
+            <button class="btn btn-success" id="addRowBtn">+ Row</button>
+            <button class="btn btn-danger" id="deleteRowBtn">🗑 Row</button>
+
+            <span class="badge" id="statusBadge">Ready</span>
+
+            <button class="btn btn-primary" id="roundtripBtn">🔄 Round-Trip</button>
+        </div>
+
+        <div id="split-view">
+            <div id="property-view-container"></div>
+        </div>
+
+        <div id="console">📋 Console</div>
+        <div id="json-preview">JSON preview will appear here after round-trip</div>
+    </div>
+
+    <script type="module">
+        import { Model } from './src/model/model.js';
+        import { PropertyView } from './src/view/treeview/propertyview.js';
+
+        // ---- Setup ----
+        const model = new Model();
+        const container = document.getElementById('property-view-container');
+        const propertyView = new PropertyView(container, model);
+
+        // ---- Console logging ----
+        function log(message, type = 'info') {
+            const consoleEl = document.getElementById('console');
+            const colors = {
+                info: '#60a5fa',
+                success: '#4ade80',
+                error: '#f87171'
+            };
+            const time = new Date().toLocaleTimeString();
+            consoleEl.innerHTML += `<div style="color: ${colors[type] || '#e0e0e0'}">[${time}] ${message}</div>`;
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        // ---- Build test data ----
+        log('📦 Building test data...');
+
+        // City
+        const cityUuid = model.addTable('City', [
+            { name: 'name', type: 'string' },
+            { name: 'population', type: 'number' }
+        ]);
+        const city = model.getTable(cityUuid);
+        city.insertRow({ name: 'Dragonhold', population: 12000 });
+        city.insertRow({ name: "Baldur's Gate", population: 42000 });
+        city.insertRow({ name: 'Neverwinter', population: 23000 });
+
+        // Building
+        const buildingUuid = model.addTable('Building', [
+            { name: 'name', type: 'string' },
+            { name: 'city', type: 'link', targetTable: cityUuid },
+            { name: 'type', type: 'string' }
+        ]);
+        const building = model.getTable(buildingUuid);
+        building.insertRow({ name: "Talon's Residence", city: 0, type: 'house' });
+        building.insertRow({ name: 'The Rusty Dagger Inn', city: 0, type: 'inn' });
+        building.insertRow({ name: 'Temple of the Old Gods', city: 0, type: 'temple' });
+
+        // Character
+        const charUuid = model.addTable('Character', [
+            { name: 'name', type: 'string' },
+            { name: 'building', type: 'link', targetTable: buildingUuid },
+            { name: 'level', type: 'number' }
+        ]);
+        const character = model.getTable(charUuid);
+        character.insertRow({ name: 'Talon', building: 0, level: 5 });
+        character.insertRow({ name: 'Greta', building: 1, level: 4 });
+        character.insertRow({ name: 'Ulric', building: 2, level: 6 });
+
+        // Weapon
+        const weaponUuid = model.addTable('Weapon', [
+            { name: 'name', type: 'string' },
+            { name: 'damage', type: 'number' },
+            { name: 'owner', type: 'link', targetTable: charUuid }
+        ]);
+        const weapon = model.getTable(weaponUuid);
+        weapon.insertRow({ name: "Talon's Bow", damage: 12, owner: 0 });
+        weapon.insertRow({ name: "Greta's Axe", damage: 18, owner: 1 });
+        weapon.insertRow({ name: "Ulric's Staff", damage: 8, owner: 2 });
+        weapon.insertRow({ name: 'Dagger', damage: 4, owner: null });
+
+        // Armor
+        const armorUuid = model.addTable('Armor', [
+            { name: 'name', type: 'string' },
+            { name: 'protection', type: 'number' },
+            { name: 'owner', type: 'link', targetTable: charUuid }
+        ]);
+        const armor = model.getTable(armorUuid);
+        armor.insertRow({ name: "Hunter's Robe", protection: 5, owner: 0 });
+        armor.insertRow({ name: 'Chainmail', protection: 8, owner: 1 });
+        armor.insertRow({ name: 'Cloak of Shadows', protection: 6, owner: 2 });
+
+        log(`✅ ${Object.keys(model.tables).length} tables created`, 'success');
+
+        // ---- Populate selectors ----
+        const tableSelector = document.getElementById('tableSelector');
+        const rowSelector = document.getElementById('rowSelector');
+
+        function populateTableSelector() {
+            tableSelector.innerHTML = '';
+            for (const [uuid, table] of Object.entries(model.tables)) {
+                const opt = document.createElement('option');
+                opt.value = uuid;
+                opt.textContent = table.name;
+                tableSelector.appendChild(opt);
+            }
+            // Select first table
+            if (tableSelector.options.length > 0) {
+                tableSelector.selectedIndex = 0;
+            }
+            updateRowSelector();
+        }
+
+        function updateRowSelector() {
+            const tableUuid = tableSelector.value;
+            const table = model.getTable(tableUuid);
+            rowSelector.innerHTML = '';
+            if (table) {
+                for (const row of table.rows) {
+                    const opt = document.createElement('option');
+                    opt.value = row._idx;
+                    const displayName = row.name || `#${row._idx}`;
+                    opt.textContent = `${displayName} (#${row._idx})`;
+                    rowSelector.appendChild(opt);
+                }
+            }
+            if (rowSelector.options.length > 0) {
+                rowSelector.selectedIndex = 0;
+            }
+            updatePropertyView();
+        }
+
+        function updatePropertyView() {
+            const tableUuid = tableSelector.value;
+            const rowIdx = parseInt(rowSelector.value);
+            if (tableUuid && !isNaN(rowIdx)) {
+                propertyView.selectInstance(rowIdx, tableUuid);
+                document.getElementById('statusBadge').textContent = `Viewing ${model.getTable(tableUuid).name} #${rowIdx}`;
+            }
+        }
+
+        tableSelector.addEventListener('change', () => {
+            updateRowSelector();
+        });
+
+        rowSelector.addEventListener('change', updatePropertyView);
+
+        // ---- Add/Delete rows ----
+        document.getElementById('addRowBtn').addEventListener('click', () => {
+            const tableUuid = tableSelector.value;
+            const table = model.getTable(tableUuid);
+            if (table) {
+                const rowData = { name: `New ${table.name}` };
+                // Add default values for other columns
+                for (const col of table.columns) {
+                    if (col.name !== 'name') {
+                        rowData[col.name] = model.getTable(tableUuid).getDefaultForType(col.type);
+                    }
+                }
+                const idx = table.insertRow(rowData);
+                log(`➕ Added row #${idx} to ${table.name}`, 'success');
+                updateRowSelector();
+                // Select the new row
+                rowSelector.value = idx;
+                updatePropertyView();
+            }
+        });
+
+        document.getElementById('deleteRowBtn').addEventListener('click', () => {
+            const tableUuid = tableSelector.value;
+            const rowIdx = parseInt(rowSelector.value);
+            const table = model.getTable(tableUuid);
+            if (table && !isNaN(rowIdx)) {
+                const row = table.getRow(rowIdx);
+                if (row && confirm(`Delete "${row.name || rowIdx}"?`)) {
+                    table.deleteRow(rowIdx);
+                    log(`🗑 Deleted row #${rowIdx} from ${table.name}`, 'error');
+                    updateRowSelector();
+                    // Select first row
+                    if (rowSelector.options.length > 0) {
+                        rowSelector.selectedIndex = 0;
+                    }
+                    updatePropertyView();
+                }
+            }
+        });
+
+        // ---- Round-Trip Test ----
+        document.getElementById('roundtripBtn').addEventListener('click', () => {
+            log('🔄 Starting round-trip test...', 'info');
+
+            // 1. Export
+            const before = model.toJSON();
+            const beforeStr = JSON.stringify(before, null, 2);
+
+            // 2. Import
+            const result = model.fromJSON(JSON.parse(beforeStr));
+
+            if (!result.success) {
+                log(`❌ Round-trip failed: ${result.error}`, 'error');
+                return;
+            }
+
+            // 3. Compare
+            const after = model.toJSON();
+            const afterStr = JSON.stringify(after, null, 2);
+
+            // Deep compare
+            const diff = deepEqual(before, after);
+
+            if (diff.ok) {
+                log('✅ Round-trip PASSED! All data survived.', 'success');
+                document.getElementById('statusBadge').textContent = '✅ Round-trip PASSED';
+                document.getElementById('statusBadge').style.color = '#16a34a';
+
+                // Show JSON preview
+                document.getElementById('json-preview').textContent = afterStr;
+            } else {
+                log(`❌ Round-trip FAILED at: ${diff.path}`, 'error');
+                log(`   Expected: ${JSON.stringify(diff.expected)}`, 'error');
+                log(`   Got: ${JSON.stringify(diff.got)}`, 'error');
+                document.getElementById('statusBadge').textContent = '❌ Round-trip FAILED';
+                document.getElementById('statusBadge').style.color = '#dc2626';
+            }
+
+            // Update UI
+            populateTableSelector();
+            updatePropertyView();
+        });
+
+        // ---- Helper: deepEqual ----
+        function deepEqual(a, b, path = '') {
+            if (a === b) return { ok: true };
+
+            if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') {
+                return { ok: false, path: path || 'root', expected: a, got: b };
+            }
+
+            const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+            for (const key of keys) {
+                const result = deepEqual(a[key], b[key], path ? `${path}.${key}` : key);
+                if (!result.ok) return result;
+            }
+            return { ok: true };
+        }
+
+        // ---- Navigation callback ----
+        propertyView.onNavigate = (rowIdx, tableUuid) => {
+            log(`🔗 Navigated to ${model.getTable(tableUuid).name} #${rowIdx}`, 'info');
+            // Update selectors to match
+            tableSelector.value = tableUuid;
+            updateRowSelector();
+            rowSelector.value = rowIdx;
+            updatePropertyView();
+        };
+
+        // ---- Init ----
+        populateTableSelector();
+        updatePropertyView();
+        log('✅ PropertyView test ready! Select a table and row to view properties.', 'success');
+        log('💡 Double-click any property value to edit it.', 'info');
+        log('🔄 Click "Round-Trip" to export → import → compare.', 'info');
+
+        // ---- Expose for debugging ----
+        window.__testModel = model;
+        window.__testPropertyView = propertyView;
+
+        // ---- Model changes notify PropertyView ----
+        model.subscribe(() => {
+            // Update row selector if rows changed
+            const currentTableUuid = tableSelector.value;
+            const currentRowIdx = parseInt(rowSelector.value);
+            const table = model.getTable(currentTableUuid);
+            if (table) {
+                // Check if current row still exists
+                const rowExists = table.rows.some(r => r._idx === currentRowIdx);
+                if (!rowExists && table.rows.length > 0) {
+                    rowSelector.value = table.rows[0]._idx;
+                    updatePropertyView();
+                }
+            }
+            // Refresh selectors
+            populateTableSelector();
+            // Keep selection if possible
+            if (tableSelector.value !== currentTableUuid) {
+                tableSelector.value = currentTableUuid;
+            }
+            updateRowSelector();
+            if (rowSelector.value !== String(currentRowIdx)) {
+                rowSelector.value = currentRowIdx;
+            }
+            updatePropertyView();
+        });
+    </script>
+</body>
+</html>
