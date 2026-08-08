@@ -1,6 +1,4 @@
-/* ============================================
-   tableview.css - Clean Slate
-   ============================================ */
+/* src/tableview/tableview.css */
 
 /* ----- Container ----- */
 #table-view-container,
@@ -12,324 +10,39 @@
     background: #ffffff;
 }
 
-/* ----- Scroll Wrapper ----- */
-.table-scroll-wrapper {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: auto;
-    position: relative;
-}
-
-/* ----- Table ----- */
-.data-table {
-    table-layout: fixed;
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    font-size: 13px;
-    font-family: system-ui, -apple-system, sans-serif;
-}
-
-/* ----- Column Widths (set by JS, fallbacks) ----- */
-.data-table col:first-child {
-    width: 40px;
-    min-width: 40px;
-    max-width: 40px;
-}
-
-.data-table col:last-child {
-    width: auto;
-    min-width: 150px;
-    max-width: 100%;
-}
-
-.data-table col:not(:first-child):not(:last-child) {
-    /* Width set by JavaScript */
-}
-
-/* ----- Rows ----- */
-.data-table tr {
-    height: 36px;
-    max-height: 36px;
-}
-
-.data-table td {
-    height: 36px;
-    max-height: 36px;
-    padding: 0 12px;
-    vertical-align: middle;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    border-bottom: 1px solid #edf2f9;
-    color: #142433;
-    font-size: 13px;
-}
-
-/* ----- Header ----- */
-.data-table thead th {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    height: 44px;
-    min-height: 44px;
-    max-height: 44px;
-    padding: 0 12px;
-    vertical-align: middle;
-    text-align: left;
-    font-weight: 600;
-    font-size: 13px;
-    color: #1c2f44;
-    background: #f8faff;
-    border-bottom: 2px solid #dce5ef;
-    user-select: none;
-}
-
-.data-table thead th:first-child {
-    width: 40px;
-    min-width: 40px;
-    max-width: 40px;
-    text-align: center;
-    font-size: 10px;
-    color: #94a3b8;
-}
-
-.data-table thead th:last-child {
-    width: auto;
-    min-width: 150px;
-}
-
-/* ----- Column Header Content ----- */
-.data-table .col-header-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    height: 100%;
-    position: relative;
-    padding-right: 20px;
-}
-
-.data-table .col-header-content .col-type {
-    font-size: 9px;
-    font-weight: 400;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #6a7f9b;
-    background: #eef3f9;
-    padding: 0 8px;
-    border-radius: 10px;
-    display: inline-block;
-    width: fit-content;
-}
-
-.data-table .col-header-content .col-name {
-    font-weight: 600;
-    font-size: 13px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    cursor: pointer;
-}
-
-/* ----- Column Delete ----- */
-.data-table .col-delete-wrapper {
-    position: absolute;
-    top: 4px;
-    right: 0;
-}
-
-.data-table .col-delete-btn {
-    background: none;
-    border: none;
-    color: #94a3b8;
-    font-size: 10px;
-    padding: 2px 4px;
-    border-radius: 4px;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.15s;
-}
-
-.data-table thead th:hover .col-delete-btn {
-    opacity: 1;
-}
-
-.data-table .col-delete-btn:hover {
-    color: #dc2626;
-    background: #fee2e2;
-}
-
-/* ----- Column Name Editor ----- */
-.column-name-editor {
-    font: inherit;
-    font-weight: 600;
-    font-size: 13px;
-    padding: 2px 4px;
-    border: 2px solid #2563eb;
-    border-radius: 4px;
-    outline: none;
-    background: white;
-    width: 100%;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-/* ----- Resizer ----- */
-.data-table .resizer {
-    position: absolute;
-    top: 0;
-    right: -4px;
-    width: 8px;
-    height: 100%;
-    cursor: col-resize;
-    z-index: 20;
-    background: #dce5ef;  /* Light gray, always visible */
-    transition: background 0.1s;
-}
-
-.data-table .resizer:hover {
-    background: #7a9bc7;
-}
-
-.data-table .resizer.active {
-    background: #4a7db5;
-}
-
-/* ----- Row Delete ----- */
-.data-table .row-delete-cell {
-    width: 40px;
-    min-width: 40px;
-    max-width: 40px;
-    text-align: center;
-    padding: 0;
-    background: white;
-    border-right: 1px solid #edf2f9;
-}
-
-.data-table tr:hover .row-delete-cell {
-    background: #f6faff;
-}
-
-.data-table .row-delete-btn {
-    background: none;
-    border: none;
-    color: #94a3b8;
-    font-size: 12px;
-    padding: 2px 4px;
-    border-radius: 4px;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.15s;
-}
-
-.data-table tr:hover .row-delete-btn {
-    opacity: 1;
-}
-
-.data-table .row-delete-btn:hover {
-    color: #dc2626;
-    background: #fee2e2;
-}
-
-/* ----- Cell Content ----- */
-.data-table .cell-content {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.data-table .cell-content .empty-value {
-    color: #94a3b8;
-    font-style: italic;
-}
-
-.data-table .cell-content .array-badge {
-    background: #e7edf8;
-    color: #1d3a6f;
-    font-size: 10px;
-    padding: 1px 8px;
-    border-radius: 30px;
-    display: inline-block;
-    margin-right: 2px;
-    white-space: nowrap;
-}
-
-.data-table .cell-content .link-badge {
-    background: #e5f3e5;
-    color: #1b6b3a;
-    font-size: 10px;
-    padding: 1px 10px;
-    border-radius: 30px;
-    border: 1px solid #b8d9b8;
-    display: inline-block;
-    white-space: nowrap;
-}
-
-.data-table .cell-content .link-uuid {
-    font-size: 8px;
-    color: #6a7f9b;
-    font-weight: 400;
-}
-
-/* ----- Cell Editor ----- */
-.data-table .editable-cell {
-    cursor: cell;
-}
-
-.data-table .cell-editor {
-    font: inherit;
-    font-size: 13px;
-    padding: 2px 6px;
-    border: 2px solid #2563eb;
-    border-radius: 4px;
-    outline: none;
-    background: white;
-    width: 100%;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.data-table .cell-editor select {
-    appearance: auto;
-}
-
-/* ----- Empty State ----- */
-.empty-state {
-    padding: 40px 20px;
-    text-align: center;
-    color: #94a3b8;
-    font-style: italic;
-}
-
-/* ----- Toolbar (from app-view.css, but scoped) ----- */
-.toolbar-table {
+/* ----- Toolbar ----- */
+.toolbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding: 6px 16px;
     gap: 8px;
     border-bottom: 1px solid #eef2f7;
     background: #fafcff;
     flex-shrink: 0;
-    min-height: 44px;
     flex-wrap: wrap;
+    min-height: 44px;
 }
 
-.toolbar-table .toolbar-left,
-.toolbar-table .toolbar-middle,
-.toolbar-table .toolbar-right {
+.toolbar-left {
     display: flex;
     align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
+    gap: 8px;
+    margin-right: auto;
 }
 
-.toolbar-table .toolbar-middle {
-    flex: 1;
-    justify-content: center;
+.toolbar-middle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.toolbar-table .toolbar-right {
-    justify-content: flex-end;
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
 }
 
 /* ----- Toolbar Elements ----- */
@@ -342,6 +55,7 @@
     background: white;
     cursor: pointer;
     outline: none;
+    min-width: 100px;
 }
 
 .table-selector:focus {
@@ -349,20 +63,17 @@
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.table-name-editor {
-    padding: 4px 10px;
-    border: 2px solid #2563eb;
-    border-radius: 6px;
-    font-size: 13px;
+.badge-count {
+    background: #eef3fa;
+    color: #2c4a6e;
+    padding: 2px 12px;
+    border-radius: 20px;
+    font-size: 12px;
     font-weight: 500;
-    outline: none;
-    background: white;
-    min-width: 120px;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .btn {
-    padding: 4px 14px;
+    padding: 4px 12px;
     border: none;
     border-radius: 6px;
     font-size: 12px;
@@ -396,6 +107,14 @@
     background: #b91c1c;
 }
 
+.btn-secondary {
+    background: #eef2f7;
+    color: #1c2f44;
+}
+.btn-secondary:hover {
+    background: #dce5ef;
+}
+
 .btn-sm {
     padding: 3px 10px;
     font-size: 11px;
@@ -405,17 +124,14 @@
     background: transparent;
     color: #94a3b8;
     padding: 2px 6px;
-    border: none;
-    border-radius: 4px;
     font-size: 14px;
-    cursor: pointer;
 }
-
 .btn-rename:hover {
     background: #eef3f9;
     color: #1c2f44;
 }
 
+/* ----- Column Controls ----- */
 .col-name-input {
     width: 90px;
     padding: 3px 8px;
@@ -425,7 +141,13 @@
     outline: none;
 }
 
-.col-type-select {
+.col-name-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.col-type-select,
+.col-target-select {
     width: 90px;
     padding: 3px 8px;
     border: 1px solid #dce5ef;
@@ -435,21 +157,226 @@
     background: white;
 }
 
-.col-target-select {
-    width: 100px;
-    padding: 3px 8px;
-    border: 1px solid #dce5ef;
-    border-radius: 4px;
-    font-size: 12px;
-    outline: none;
-    background: white;
-    display: none;
-}
-
-.col-name-input:focus,
 .col-type-select:focus,
 .col-target-select:focus {
     border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.col-target-select {
+    display: none;
+}
+
+/* ----- Scroll Wrapper ----- */
+.table-scroll-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    position: relative;
+}
+
+/* ----- Data Table ----- */
+.data-table {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.data-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8faff;
+    color: #1c2f44;
+    font-weight: 600;
+    padding: 6px 12px 4px 12px;
+    text-align: left;
+    border-bottom: 2px solid #dce5ef;
+    user-select: none;
+    vertical-align: top;
+    height: auto;
+    min-height: 44px;
+}
+
+.data-table td {
+    padding: 4px 12px;
+    border-bottom: 1px solid #edf2f9;
+    color: #142433;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ----- Column Header ----- */
+.data-table .col-header-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    position: relative;
+    padding-right: 20px;
+}
+
+.data-table .col-header-content .col-type {
+    font-weight: 400;
+    color: #6a7f9b;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: #eef3f9;
+    padding: 1px 8px;
+    border-radius: 10px;
+    display: inline-block;
+    width: fit-content;
+}
+
+.data-table .col-header-content .col-name {
+    font-weight: 600;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.data-table .col-delete-wrapper {
+    position: absolute;
+    top: 4px;
+    right: 0;
+}
+
+.data-table .col-delete-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.data-table thead th:hover .col-delete-btn {
+    opacity: 1;
+}
+
+.data-table .col-delete-btn:hover {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+/* ----- Row Delete ----- */
+.data-table .row-delete-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.data-table tr:hover .row-delete-btn {
+    opacity: 1;
+}
+
+.data-table .row-delete-btn:hover {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+/* ----- Cell Content ----- */
+.data-table .cell-content {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-height: 1.2rem;
+}
+
+.data-table .cell-content .empty-value {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.data-table .cell-content .array-badge {
+    background: #e7edf8;
+    color: #1d3a6f;
+    font-size: 10px;
+    padding: 1px 8px;
+    border-radius: 30px;
+    display: inline-block;
+    margin: 0 2px 0 0;
+    white-space: nowrap;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+.data-table .cell-content .link-badge {
+    background: #e5f3e5;
+    color: #1b6b3a;
+    font-size: 10px;
+    padding: 1px 10px;
+    border-radius: 30px;
+    border: 1px solid #b8d9b8;
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+    vertical-align: middle;
+}
+
+/* ----- Cell Editor ----- */
+.data-table .editable-cell {
+    cursor: cell;
+    position: relative;
+}
+
+.data-table .cell-editor {
+    font: inherit;
+    font-size: 13px;
+    padding: 2px 6px;
+    border: 2px solid #2563eb;
+    border-radius: 4px;
+    outline: none;
+    background: white;
+    width: 100%;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.data-table .cell-editor select {
+    appearance: auto;
+}
+
+/* ----- Empty State ----- */
+.empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* ----- Column Name Editor ----- */
+.column-name-editor {
+    font: inherit;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 2px 4px;
+    border: 2px solid #2563eb;
+    border-radius: 4px;
+    outline: none;
+    background: white;
+    width: 100%;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
